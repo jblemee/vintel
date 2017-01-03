@@ -37,7 +37,6 @@ JB_COLORS = ("800000", "808000", "BC8F8F", "ff00ff", "c83737", "FF6347", "917c6f
              "88aa00" "FFE4E1", "008080", "00BFFF", "4682B4", "00FF7F", "7FFF00", "ff6600",
              "CD5C5C", "FFD700", "66CDAA", "AFEEEE", "5F9EA0", "FFDEAD", "696969", "2F4F4F")
 
-
 class DotlanException(Exception):
     def __init__(self, *args, **kwargs):
         Exception.__init__(self, *args, **kwargs)
@@ -47,8 +46,6 @@ class Map(object):
     """
         The map including all information from dotlan
     """
-
-    DOTLAN_BASIC_URL = u"http://evemaps.dotlan.net/svg/{0}.svg"
 
     @property
     def svg(self):
@@ -218,7 +215,7 @@ class Map(object):
                 startSystem.addNeighbour(stopSystem)
 
     def _getSvgFromDotlan(self, region):
-        url = self.DOTLAN_BASIC_URL.format(region)
+        url = dotlan_url(region)
         content = requests.get(url).text
         return content
 
@@ -510,6 +507,15 @@ class System(object):
                 self.setBackgroundColor("rgb({r},{g},{b})".format(r=calcValue, g=255, b=calcValue))
             self.secondLine.string = string
 
+
+def dotlan_url(region):
+    """ Generate a DOTLAN url from the specified region name (which will be normalized to a DOTLAN region name)
+    """
+    url = u"http://evemaps.dotlan.net/svg/{0}.svg".format(convertRegionName(region))
+    jb_id = Cache().getConfigValue("dotlan_jb_id")
+    if jb_id:
+         url = url + u"?path=B:{0}".format(jb_id)
+    return url
 
 def convertRegionName(name):
     """

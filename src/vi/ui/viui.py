@@ -41,6 +41,7 @@ from vi.soundmanager import SoundManager
 from vi.threads import AvatarFindThread, KOSCheckerThread, MapStatisticsThread
 from vi.ui.systemtray import TrayContextMenu
 from vi.chatparser import ChatParser
+from vi.regions import REGIONS
 from PyQt4.QtGui import QAction
 from PyQt4.QtGui import QMessageBox
 
@@ -134,6 +135,7 @@ class MainWindow(QtGui.QMainWindow):
         self.wireUpUIConnections()
         self.recallCachedSettings()
         self.setupThreads()
+        self.updateRegionMenu()
         self.setupMap(True)
 
 
@@ -152,6 +154,17 @@ class MainWindow(QtGui.QMainWindow):
             # todo: add a button to delete the cache / DB
             self.trayIcon.showMessage("Settings error", "Something went wrong loading saved state:\n {0}".format(str(e)), 1)
 
+    def updateRegionMenu(self):
+        for region in REGIONS:
+            menuItem= self.otherRegionSubmenu.addAction(region)
+            receiver = lambda region=region: self.onRegionSelect(region)
+            self.connect(menuItem, SIGNAL('triggered()'), receiver)
+            self.otherRegionSubmenu.addAction(menuItem)
+
+    def onRegionSelect(self, region):
+        logging.critical("NEW REGION: [%s]" % (region))
+        Cache().saveConfigValue("region_name", region)
+        self.handleRegionChosen()
 
     def wireUpUIConnections(self):
         # Wire up general UI connections
@@ -280,8 +293,6 @@ class MainWindow(QtGui.QMainWindow):
                 self.providenceRegionAction.setChecked(True)
             elif regionName.startswith("Querious"):
                 self.queriousRegionAction.setChecked(True)
-            else:
-                self.chooseRegionAction.setChecked(True)
         self.jumpbridgesButton.setChecked(False)
         self.statisticsButton.setChecked(False)
 
@@ -624,7 +635,6 @@ class MainWindow(QtGui.QMainWindow):
         self.queriousRegionAction.setChecked(False)
         self.providenceCatchRegionAction.setChecked(False)
         self.providenceCatchCompactRegionAction.setChecked(False)
-        self.chooseRegionAction.setChecked(False)
         if menuAction:
             menuAction.setChecked(True)
             regionName = six.text_type(menuAction.property("regionName").toString())
@@ -632,16 +642,13 @@ class MainWindow(QtGui.QMainWindow):
             Cache().saveConfigValue("region_name", regionName)
             self.setupMap()
 
+    def handleRegionChosen(self):
+        self.handleRegionMenuItemSelected(None)
+        self.setupMap()
 
     def showRegionChooser(self):
-        def handleRegionChosen():
-            self.handleRegionMenuItemSelected(None)
-            self.chooseRegionAction.setChecked(True)
-            self.setupMap()
-
-        self.chooseRegionAction.setChecked(False)
         chooser = RegionChooser(self)
-        self.connect(chooser, SIGNAL("new_region_chosen"), handleRegionChosen)
+        self.connect(chooser, SIGNAL("new_region_chosen"), self.handleRegionChosen)
         chooser.show()
 
 
@@ -854,7 +861,7 @@ class RegionChooser(QtGui.QDialog):
         self.regionNameField.setPlainText(text)
         correct = False
         try:
-            url = dotlan.Map.DOTLAN_BASIC_URL.format(text)
+            url = dotlan.dotlan_url(text)
             content = requests.get(url).text
             if u"not found" in content:
                 correct = False
