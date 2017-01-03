@@ -56,13 +56,20 @@ class Application(QApplication):
     def __init__(self, args):
         super(Application, self).__init__(args)
 
+        self.setWindowIcon(QtGui.QIcon('icon.ico'))
+        # windows silliness to set taskbar icon
+        if sys.platform.startswith("win32"):
+            import ctypes
+            myappid = u'eve.vintel.' + version.VERSION
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+
         # Set up paths
         chatLogDirectory = ""
         if len(sys.argv) > 1:
             chatLogDirectory = sys.argv[1]
 
         if not os.path.exists(chatLogDirectory):
-            if sys.platform.startswith("darwin"):
+            if sys.platform.startswith("darwin") or sys.platform.startswith("cygwin"):
                 chatLogDirectory = os.path.join(os.path.expanduser("~"), "Documents", "EVE", "logs", "Chatlogs")
                 if not os.path.exists(chatLogDirectory):
                     chatLogDirectory = os.path.join(os.path.expanduser("~"), "Library", "Application Support", "Eve Online",
@@ -71,10 +78,12 @@ class Application(QApplication):
                 chatLogDirectory = os.path.join(os.path.expanduser("~"), "EVE", "logs", "Chatlogs")
             elif sys.platform.startswith("win32") or sys.platform.startswith("cygwin"):
                 import ctypes.wintypes
+                from win32com.shell import shellcon
                 buf = ctypes.create_unicode_buffer(ctypes.wintypes.MAX_PATH)
-                ctypes.windll.shell32.SHGetFolderPathW(0, 5, 0, 0, buf)
-                documentsPath = buf.value
-                chatLogDirectory = os.path.join(documentsPath, "EVE", "logs", "Chatlogs")
+                hResult = ctypes.windll.shell32.SHGetFolderPathW(0, shellcon.CSIDL_PERSONAL, 0, 0, buf)
+                if hResult == 0:
+                    documentsPath = buf.value
+                    chatLogDirectory = os.path.join(documentsPath, "EVE", "logs", "Chatlogs")
         if not os.path.exists(chatLogDirectory):
             # None of the paths for logs exist, bailing out
             QMessageBox.critical(None, "No path to Logs", "No logs found at: " + chatLogDirectory, "Quit")

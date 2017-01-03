@@ -74,6 +74,23 @@ pyglet is used to play the sound – If it is not available the sound option wil
 https://pypi.python.org/pypi/requests
 - Six for python 3 compatibility https://pypi.python.org/pypi/six
 
+## Note for windows users
+
+The anaconda python package will come with most of what you need [download](https://www.continuum.io/downloads#windows).
+vintel compilation has been tested with 64 bit anaconda2 v4.2.0 for python 2.7 on windows 10.
+
+You will need to run these two commands to downgrade qt5 to qt4 and install the pyglet package.  If you installed anaconda for all
+users, you may need to run them in an *admin* anaconda prompt.
+
+```
+conda install pyqt=4
+pip install pyglet
+```
+
+## Note for cygwin users
+
+pyglet doesn't currently work under cygwin.  Skip installing it or pip uninstall if it causes problems.
+
 ## Building the Vintel Standalone Package
 
  - The standalone is created using pyinstaller. All media files and the .spec-file with the configuration for pyinstaller are included in the source repo. Pyinstaller can be found here: https://github.com/pyinstaller/pyinstaller/wiki.
