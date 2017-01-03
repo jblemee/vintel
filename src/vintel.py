@@ -93,10 +93,10 @@ class Application(QApplication):
         splash = QtGui.QSplashScreen(QtGui.QPixmap(resourcePath("vi/ui/res/logo.png")))
 
         vintelCache = Cache()
-        logLevel = vintelCache.getFromCache("logging_level")
+        logLevel = vintelCache.getConfigValue("logging_level")
         if not logLevel:
             logLevel = logging.WARN
-        backGroundColor = vintelCache.getFromCache("background_color")
+        backGroundColor = vintelCache.getConfigValue("background_color")
         if backGroundColor:
             self.setStyleSheet("QWidget { background-color: %s; }" % backGroundColor)
 
@@ -137,4 +137,3 @@ if __name__ == "__main__":
 
     app = Application(sys.argv)
     sys.exit(app.exec_())
-

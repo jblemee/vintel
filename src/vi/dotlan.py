@@ -90,17 +90,39 @@ class Map(object):
                         "without the map.\n\nRemember the site for possible " \
                         "updates: https://github.com/Xanthos-Eve/vintel".format(type(e), six.text_type(e))
                     raise DotlanException(t)
+
         # Create soup from the svg
-        self.soup = BeautifulSoup(svg, 'html.parser')
-        self.systems = self._extractSystemsFromSoup(self.soup)
-        self.systemsById = {}
-        for system in self.systems.values():
-            self.systemsById[system.systemId] = system
-        self._prepareSvg(self.soup, self.systems)
-        self._connectNeighbours()
-        self._jumpMapsVisible = False
-        self._statisticsVisible = False
-        self.marker = self.soup.select("#select_marker")[0]
+        try:
+            self.soup = BeautifulSoup(svg, 'html.parser')
+            self.systems = self._extractSystemsFromSoup(self.soup)
+            self._cleanSoup(self.soup)
+            self.systemsById = {}
+            for system in self.systems.values():
+                self.systemsById[system.systemId] = system
+            self._prepareSvg(self.soup, self.systems)
+            self._connectNeighbours()
+            self._jumpMapsVisible = False
+            self._statisticsVisible = False
+            self.marker = self.soup.select("#select_marker")[0]
+        except Exception as e:
+            # Could get hung up on a bad retreival forever
+            cache.deleteFromCache("map_" + self.region)
+            raise
+
+    def _cleanSoup(self, soup):
+        try:
+            legend = soup.find('g', id='legend')
+            copyright = legend.find('text', class_='lc')
+            copyright.string = '(C) by Wollari & CCP'
+            for t in legend.select("text"):
+                if t.text == '= Alliance':
+                    t.string = '= Intel Time'
+                elif t.text == '= Sov. Lvl' or t.text == 'Z':
+                    t.string = ''
+                elif t.text == 'YYYYY (Z)':
+                    t.string = 'YYYYY'
+        except:
+                pass
 
     def _extractSystemsFromSoup(self, soup):
         systems = {}
@@ -118,16 +140,21 @@ class Map(object):
                 continue
             for element in symbol.select(".sys"):
                 name = element.select("text")[0].text.strip().upper()
+                # could be region name or sov. info
+                secondaryInfo = element.select("text")[1].text.strip().upper()
                 mapCoordinates = {}
                 for keyname in ("x", "y", "width", "height"):
                     mapCoordinates[keyname] = float(uses[symbolId][keyname])
                 mapCoordinates["center_x"] = (mapCoordinates["x"] + (mapCoordinates["width"] / 2))
                 mapCoordinates["center_y"] = (mapCoordinates["y"] + (mapCoordinates["height"] / 2))
+                # Modify href to just be system name to deal better with out of region systems drawn on map
+                # leaving slash for now, not sure about effects on provi/catch combined maps
+                symbol.a['xlink:href'] = "/" + name
                 try:
                     transform = uses[symbolId]["transform"]
                 except KeyError:
                     transform = "translate(0,0)"
-                systems[name] = System(name, element, self.soup, mapCoordinates, transform, systemId)
+                systems[name] = System(name, secondaryInfo, element, self.soup, mapCoordinates, transform, systemId)
         return systems
 
     def _prepareSvg(self, soup, systems):
@@ -291,9 +318,10 @@ class System(object):
     UNKNOWN_COLOR = "#FFFFFF"
     CLEAR_COLOR = "#59FF6C"
 
-    def __init__(self, name, svgElement, mapSoup, mapCoordinates, transform, systemId):
+    def __init__(self, name, secondaryInfo, svgElement, mapSoup, mapCoordinates, transform, systemId):
         self.status = states.UNKNOWN
         self.name = name
+        self.secondaryInfo = secondaryInfo
         self.svgElement = svgElement
         self.mapSoup = mapSoup
         self.origSvgElement = svgElement
@@ -485,7 +513,7 @@ class System(object):
 
 def convertRegionName(name):
     """
-        Converts a (system)name to the format that dotland uses
+        Converts a (system)name to the format that dotlan uses
     """
     converted = []
     nextUpper = False

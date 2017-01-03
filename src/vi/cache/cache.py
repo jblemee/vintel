@@ -21,6 +21,7 @@ import sqlite3
 import threading
 import time
 import six
+import sys
 if six.PY2:
     def to_blob(x):
         return buffer(str(x))
@@ -98,6 +99,24 @@ class Cache(object):
         else:
             return founds[0][1]
 
+    def getConfigValue(self, key):
+        """ Retrieve a config value from cache that never expires
+        """
+        return self.getFromCache(key, True)
+
+    def saveConfigValue(self, key, value):
+        """ Save a config value to cache that never expires
+        """
+        return self.putIntoCache(key, value, sys.maxsize)
+
+    def deleteFromCache(self, key):
+        """ Deleteing from cache
+        """
+        with Cache.SQLITE_WRITE_LOCK:
+            query = "DELETE FROM cache WHERE key = ?"
+            self.con.execute(query, (key,))
+            self.con.commit()
+
     def putPlayerName(self, name, status):
         """ Putting a playername into the cache
         """
@@ -161,5 +180,3 @@ class Cache(object):
                     getattr(obj, setting[1])(setting[2])
                 except Exception as e:
                     logging.error(e)
-
-
