@@ -314,15 +314,15 @@
      <x>0</x>
      <y>0</y>
      <width>936</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu">
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="jumpbridgeDataAction"/>
-    <addaction name="chooseChatRoomsAction"/>
+    <addaction name="settingsAction"/>
+    <addaction name="flushCacheAction"/>
     <addaction name="separator"/>
     <addaction name="infoAction"/>
     <addaction name="separator"/>
@@ -353,12 +353,6 @@
       <string>Other Region...</string>
      </property>
     </widget>
-    <addaction name="catchRegionAction"/>
-    <addaction name="providenceRegionAction"/>
-    <addaction name="queriousRegionAction"/>
-    <addaction name="separator"/>
-    <addaction name="providenceCatchRegionAction"/>
-    <addaction name="providenceCatchCompactRegionAction"/>
     <addaction name="separator"/>
     <addaction name="otherRegionSubmenu"/>
     <addaction name="separator"/>
@@ -507,9 +501,6 @@
    </property>
   </action>
   <action name="chooseRegionAction">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
    <property name="text">
     <string>Custom Region...</string>
    </property>
@@ -519,9 +510,9 @@
     <string>Sound Setup...</string>
    </property>
   </action>
-  <action name="jumpbridgeDataAction">
+  <action name="flushCacheAction">
    <property name="text">
-    <string>Jumpbridge Data...</string>
+    <string>Flush Cache</string>
    </property>
   </action>
   <action name="useSpokenNotificationsAction">
@@ -570,59 +561,9 @@
     <string>Transparency</string>
    </property>
   </action>
-  <action name="providenceRegionAction">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
+  <action name="settingsAction">
    <property name="text">
-    <string>Providence</string>
-   </property>
-   <property name="regionName" stdset="0">
-    <string>providence</string>
-   </property>
-  </action>
-  <action name="catchRegionAction">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Catch</string>
-   </property>
-   <property name="regionName" stdset="0">
-    <string>catch</string>
-   </property>
-  </action>
-  <action name="providenceCatchRegionAction">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Provi / Catch</string>
-   </property>
-   <property name="regionName" stdset="0">
-    <string>providencecatch</string>
-   </property>
-  </action>
-  <action name="providenceCatchCompactRegionAction">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Provi / Catch (compact)</string>
-   </property>
-   <property name="regionName" stdset="0">
-    <string>Providence-catch</string>
-   </property>
-  </action>
-  <action name="queriousRegionAction">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Querious</string>
-   </property>
-   <property name="regionName" stdset="0">
-    <string>querious</string>
+    <string>Settings</string>
    </property>
   </action>
  </widget>
@@ -630,7 +571,7 @@
   <customwidget>
    <class>QWebView</class>
    <extends>QWidget</extends>
-   <header>QtWebKitWidgets/QWebView</header>
+   <header>QtWebKit/QWebView</header>
   </customwidget>
   <customwidget>
    <class>PanningWebView</class>

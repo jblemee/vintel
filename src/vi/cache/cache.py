@@ -76,7 +76,7 @@ class Cache(object):
         updateDatabase(version, self.con)
 
     def putIntoCache(self, key, value, maxAge=60 * 60 * 24 * 3):
-        """ Putting something in the cache maxAge is maximum age in seconds
+        """ Putting something in the cache maxAge is maximum age in seconds, default is 3 days
         """
         with Cache.SQLITE_WRITE_LOCK:
             query = "DELETE FROM cache WHERE key = ?"
@@ -115,6 +115,14 @@ class Cache(object):
         with Cache.SQLITE_WRITE_LOCK:
             query = "DELETE FROM cache WHERE key = ?"
             self.con.execute(query, (key,))
+            self.con.commit()
+
+    def flush(self):
+        """ Flush non config items from cache
+        """
+        with Cache.SQLITE_WRITE_LOCK:
+            query = "DELETE FROM cache WHERE maxAge < ?"
+            self.con.execute(query, (sys.maxsize,))
             self.con.commit()
 
     def putPlayerName(self, name, status):

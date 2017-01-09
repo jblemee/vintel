@@ -21,6 +21,8 @@ import datetime
 import sys
 import time
 import six
+import json
+import traceback
 import requests
 import webbrowser
 
@@ -95,12 +97,12 @@ class MainWindow(QtGui.QMainWindow):
             QMessageBox.warning(None, "Known Characters not Found", diagText, "Ok")
 
         # Set up user's intel rooms
-        roomnames = self.cache.getConfigValue("room_names")
+        roomnames = self.cache.getConfigValue("channel_names")
         if roomnames:
             roomnames = roomnames.split(",")
         else:
             roomnames = (u"TheCitadel", u"North Provi Intel", u"North Catch Intel", "North Querious Intel")
-            self.cache.saveConfigValue("room_names", u",".join(roomnames))
+            self.cache.saveConfigValue("channel_names", u",".join(roomnames))
         self.roomnames = roomnames
 
         # Disable the sound UI if sound is not available
@@ -136,6 +138,7 @@ class MainWindow(QtGui.QMainWindow):
         self.recallCachedSettings()
         self.setupThreads()
         self.updateRegionMenu()
+        self.updateOtherRegionMenu()
         self.setupMap(True)
 
 
@@ -144,6 +147,27 @@ class MainWindow(QtGui.QMainWindow):
         opt.initFrom(self)
         painter = QPainter(self)
         self.style().drawPrimitive(QStyle.PE_Widget, opt,  painter, self)
+
+    def wheelEvent(self,event):
+        if event.modifiers() & QtCore.Qt.ControlModifier:
+            steps = event.delta() // 120
+            vector = steps and steps // abs(steps) # 0, 1, or -1
+            for step in range(1, abs(steps) + 1):
+                self.mapView.setZoomFactor(self.mapView.zoomFactor() + vector * 0.1)
+
+    def keyPressEvent(self, event):
+        key = event.key()
+        if key == QtCore.Qt.Key_0:
+            if event.modifiers() & QtCore.Qt.ControlModifier:
+                self.mapView.setZoomFactor(1.0)
+        elif key == QtCore.Qt.Key_Plus or key == QtCore.Qt.Key_Equal:
+            if event.modifiers() & QtCore.Qt.ControlModifier:
+                self.mapView.setZoomFactor(self.mapView.zoomFactor() + 0.1)
+        elif key == QtCore.Qt.Key_Minus or key == QtCore.Qt.Key_Underscore:
+            if event.modifiers() & QtCore.Qt.ControlModifier:
+                self.mapView.setZoomFactor(self.mapView.zoomFactor() - 0.1)
+        elif key == QtCore.Qt.Key_J:
+            self.changeJumpbridgesVisibility()
 
 
     def recallCachedSettings(self):
@@ -154,12 +178,37 @@ class MainWindow(QtGui.QMainWindow):
             # todo: add a button to delete the cache / DB
             self.trayIcon.showMessage("Settings error", "Something went wrong loading saved state:\n {0}".format(str(e)), 1)
 
-    def updateRegionMenu(self):
+    def updateOtherRegionMenu(self):
         for region in REGIONS:
-            menuItem= self.otherRegionSubmenu.addAction(region)
+            menuItem = self.otherRegionSubmenu.addAction(region)
             receiver = lambda region=region: self.onRegionSelect(region)
             self.connect(menuItem, SIGNAL('triggered()'), receiver)
             self.otherRegionSubmenu.addAction(menuItem)
+
+    def updateRegionMenu(self):
+        quick_regions = self.cache.getConfigValue("quick_regions")
+        if quick_regions:
+            j = json.loads(quick_regions)
+            for old_item in self.menuRegion.actions():
+                if "Other Region..." == old_item.text():
+                    orm = self.menuRegion.insertSeparator(old_item)
+                    break
+                self.menuRegion.removeAction(old_item)
+            for r in j:
+                if not 'label' in r:
+                    self.trayIcon.showMessage("Quick regions error", "No label field in :\n {0}".format(str(r)), 1)
+                label = r['label']
+                if label.startswith('-'):
+                    menuItem = self.menuRegion.insertSeparator(orm)
+                    continue
+                if 'region' in r:
+                    region = r['region']
+                else:
+                    region = label
+                menuItem = self.menuRegion.addAction(label)
+                receiver = lambda region=region: self.onRegionSelect(region)
+                self.connect(menuItem, SIGNAL('triggered()'), receiver)
+                self.menuRegion.insertAction(orm, menuItem)
 
     def onRegionSelect(self, region):
         logging.critical("NEW REGION: [%s]" % (region))
@@ -180,12 +229,6 @@ class MainWindow(QtGui.QMainWindow):
         self.connect(self.infoAction, SIGNAL("triggered()"), self.showInfo)
         self.connect(self.showChatAvatarsAction, SIGNAL("triggered()"), self.changeShowAvatars)
         self.connect(self.alwaysOnTopAction, SIGNAL("triggered()"), self.changeAlwaysOnTop)
-        self.connect(self.chooseChatRoomsAction, SIGNAL("triggered()"), self.showChatroomChooser)
-        self.connect(self.catchRegionAction, SIGNAL("triggered()"), lambda : self.handleRegionMenuItemSelected(self.catchRegionAction))
-        self.connect(self.providenceRegionAction, SIGNAL("triggered()"), lambda : self.handleRegionMenuItemSelected(self.providenceRegionAction))
-        self.connect(self.queriousRegionAction, SIGNAL("triggered()"), lambda : self.handleRegionMenuItemSelected(self.queriousRegionAction))
-        self.connect(self.providenceCatchRegionAction, SIGNAL("triggered()"), lambda : self.handleRegionMenuItemSelected(self.providenceCatchRegionAction))
-        self.connect(self.providenceCatchCompactRegionAction, SIGNAL("triggered()"), lambda : self.handleRegionMenuItemSelected(self.providenceCatchCompactRegionAction))
         self.connect(self.chooseRegionAction, SIGNAL("triggered()"), self.showRegionChooser)
         self.connect(self.showChatAction, SIGNAL("triggered()"), self.changeChatVisibility)
         self.connect(self.soundSetupAction, SIGNAL("triggered()"), self.showSoundSetup)
@@ -197,7 +240,8 @@ class MainWindow(QtGui.QMainWindow):
         self.connect(self.frameButton, SIGNAL("clicked()"), self.changeFrameless)
         self.connect(self.quitAction, SIGNAL("triggered()"), self.close)
         self.connect(self.trayIcon, SIGNAL("quit"), self.close)
-        self.connect(self.jumpbridgeDataAction, SIGNAL("triggered()"), self.showJumbridgeChooser)
+        self.connect(self.settingsAction, SIGNAL("triggered()"), self.showSettings)
+        self.connect(self.flushCacheAction, SIGNAL("triggered()"), self.flushCache)
         self.mapView.page().scrollRequested.connect(self.mapPositionChanged)
 
 
@@ -282,17 +326,6 @@ class MainWindow(QtGui.QMainWindow):
             # Clicking links
             self.mapView.connect(self.mapView, SIGNAL("linkClicked(const QUrl&)"), self.mapLinkClicked)
 
-            # Also set up our app menus
-            if not regionName:
-                self.providenceCatchRegionAction.setChecked(True)
-            elif regionName.startswith("Providencecatch"):
-                self.providenceCatchRegionAction.setChecked(True)
-            elif regionName.startswith("Catch"):
-                self.catchRegionAction.setChecked(True)
-            elif regionName.startswith("Providence"):
-                self.providenceRegionAction.setChecked(True)
-            elif regionName.startswith("Querious"):
-                self.queriousRegionAction.setChecked(True)
         self.jumpbridgesButton.setChecked(False)
         self.statisticsButton.setChecked(False)
 
@@ -593,24 +626,21 @@ class MainWindow(QtGui.QMainWindow):
             self.mapPositionsDict[regionName] = (scrollPosition.x(), scrollPosition.y())
 
 
-    def showChatroomChooser(self):
-        chooser = ChatroomsChooser(self)
+    def showSettings(self):
+        chooser = Settings(self)
         chooser.connect(chooser, SIGNAL("rooms_changed"), self.changedRoomnames)
-        chooser.show()
-
-
-    def showJumbridgeChooser(self):
-        url = self.cache.getConfigValue("jumpbridge_url")
-        chooser = JumpbridgeChooser(self, url)
         chooser.connect(chooser, SIGNAL("set_jumpbridge_url"), self.setJumpbridges)
         chooser.show()
 
+    def flushCache(self):
+        self.cache.flush()
 
     def setSoundVolume(self, value):
         SoundManager().setSoundVolume(value)
 
 
     def setJumpbridges(self, url):
+
         if url is None:
             url = ""
         try:
@@ -630,20 +660,13 @@ class MainWindow(QtGui.QMainWindow):
 
 
     def handleRegionMenuItemSelected(self, menuAction=None):
-        self.catchRegionAction.setChecked(False)
-        self.providenceRegionAction.setChecked(False)
-        self.queriousRegionAction.setChecked(False)
-        self.providenceCatchRegionAction.setChecked(False)
-        self.providenceCatchCompactRegionAction.setChecked(False)
         if menuAction:
-            menuAction.setChecked(True)
             regionName = six.text_type(menuAction.property("regionName").toString())
             regionName = dotlan.convertRegionName(regionName)
             Cache().saveConfigValue("region_name", regionName)
             self.setupMap()
 
     def handleRegionChosen(self):
-        self.handleRegionMenuItemSelected(None)
         self.setupMap()
 
     def showRegionChooser(self):
@@ -714,7 +737,7 @@ class MainWindow(QtGui.QMainWindow):
 
 
     def changedRoomnames(self, newRoomnames):
-        self.cache.saveConfigValue("room_names", u",".join(newRoomnames))
+        self.cache.saveConfigValue("channel_names", u",".join(newRoomnames))
         self.chatparser.rooms = newRoomnames
 
 
@@ -815,31 +838,6 @@ class MainWindow(QtGui.QMainWindow):
                                 if len(chars) > 0 and message.user not in chars:
                                     self.trayIcon.showNotification(message, system.name, ", ".join(chars), distance)
                 self.setMapContent(self.dotlan.svg)
-
-
-class ChatroomsChooser(QtGui.QDialog):
-    def __init__(self, parent):
-        QtGui.QDialog.__init__(self, parent)
-        uic.loadUi(resourcePath("vi/ui/ChatroomsChooser.ui"), self)
-        self.connect(self.defaultButton, SIGNAL("clicked()"), self.setDefaults)
-        self.connect(self.cancelButton, SIGNAL("clicked()"), self.accept)
-        self.connect(self.saveButton, SIGNAL("clicked()"), self.saveClicked)
-        cache = Cache()
-        roomnames = cache.getConfigValue("room_names")
-        if not roomnames:
-            roomnames = u"TheCitadel,North Provi Intel,North Catch Intel,North Querious Intel"
-        self.roomnamesField.setPlainText(roomnames)
-
-
-    def saveClicked(self):
-        text = six.text_type(self.roomnamesField.toPlainText())
-        rooms = [six.text_type(name.strip()) for name in text.split(",")]
-        self.accept()
-        self.emit(SIGNAL("rooms_changed"), rooms)
-
-
-    def setDefaults(self):
-        self.roomnamesField.setPlainText(u"TheCitadel,North Provi Intel,North Catch Intel,North Querious Intel")
 
 
 class RegionChooser(QtGui.QDialog):
@@ -1015,24 +1013,100 @@ class ChatEntryWidget(QtGui.QWidget):
         self.textLabel.setFont(font)
 
 
-class JumpbridgeChooser(QtGui.QDialog):
-    def __init__(self, parent, url):
+class Settings(QtGui.QDialog):
+    def __init__(self, parent):
         QtGui.QDialog.__init__(self, parent)
-        uic.loadUi(resourcePath("vi/ui/JumpbridgeChooser.ui"), self)
-        self.connect(self.saveButton, SIGNAL("clicked()"), self.savePath)
-        self.connect(self.cancelButton, SIGNAL("clicked()"), self.accept)
-        self.urlField.setText(url)
+        uic.loadUi(resourcePath("vi/ui/SettingsTabs.ui"), self)
+        self.cache = Cache()
+        self.parent = parent
+        self.tabs.setCurrentIndex(0)    # load displaying first tab, regardless of which page was last open in designer
+
+        # Chatrooms
+        self.connect(self.chatDefaultButton, SIGNAL("clicked()"), self.setChatToDefaults)
+        self.connect(self.chatCancelButton, SIGNAL("clicked()"), self.resetChatSettings)
+        self.connect(self.chatSaveButton, SIGNAL("clicked()"), self.saveChatSettings)
+        self.resetChatSettings()
+
+        # JBS
+        self.connect(self.jbSaveButton, SIGNAL("clicked()"), self.saveJbs)
+        self.connect(self.jbCancelButton, SIGNAL("clicked()"), self.resetJbs)
+        self.resetJbs()
         # loading format explanation from textfile
-        with open(resourcePath("docs/jumpbridgeformat.txt")) as f:
-            self.formatInfoField.setPlainText(f.read())
+        # with open(resourcePath("docs/jumpbridgeformat.txt")) as f:
+        #     self.formatInfoField.setPlainText(f.read())
 
+        # Quick Setup
+        self.connect(self.quickSettingsSaveButton, SIGNAL("clicked()"), self.saveQuickSettings)
+        self.connect(self.quickSettingsCancelButton, SIGNAL("clicked()"), self.resetQuickSettings)
+        self.resetQuickSettings()
 
-    def savePath(self):
+    def resetJbs(self):
+        self.jbUrlField.setText(self.cache.getConfigValue("jumpbridge_url"))
+        self.jbIdField.setText(self.cache.getConfigValue("dotlan_jb_id"))
+
+    def saveJbs(self):
         try:
-            url = six.text_type(self.urlField.text())
+            url = six.text_type(self.jbUrlField.text())
             if url != "":
                 requests.get(url).text
+            self.cache.saveConfigValue("dotlan_jb_id", six.text_type(self.jbIdField.text()))
             self.emit(SIGNAL("set_jumpbridge_url"), url)
-            self.accept()
         except Exception as e:
             QMessageBox.critical(None, "Finding Jumpbridgedata failed", "Error: {0}".format(six.text_type(e)), "OK")
+
+    def resetChatSettings(self):
+        roomnames = self.cache.getConfigValue("channel_names")
+        if not roomnames:
+            self.setChatToDefaults()
+        else:
+            self.roomnamesField.setPlainText(roomnames)
+
+    def saveChatSettings(self):
+        text = six.text_type(self.roomnamesField.toPlainText())
+        rooms = [six.text_type(name.strip()) for name in text.split(",")]
+        self.emit(SIGNAL("rooms_changed"), rooms)
+
+    def setChatToDefaults(self):
+        roomnames = self.cache.getConfigValue("default_room_names")
+        if not roomnames:
+            self.roomnamesField.setPlainText(u"TheCitadel,North Provi Intel,North Catch Intel,North Querious Intel")
+        else:
+            self.roomnamesField.setPlainText(roomnames)
+
+    def resetQuickSettings(self):
+        self.quickSettingsField.setPlainText("")
+
+    def saveQuickSettings(self):
+        try:
+            d = json.loads(six.text_type(self.quickSettingsField.toPlainText()))
+            if not dict:
+                QMessageBox.critical(None, "Could not parse input field", "Error: {0}".format(six.text_type(d)), "OK")
+                return
+
+            if 'channels' in d:
+                self.cache.saveConfigValue('default_room_names', ",".join(d['channels']))
+                self.emit(SIGNAL("rooms_changed"), d['channels'])
+
+            if 'dotlan_jb_id' in d:
+                self.cache.saveConfigValue("dotlan_jb_id", d['dotlan_jb_id'])
+
+            if 'jumpbridge_url' in d:
+                self.emit(SIGNAL("set_jumpbridge_url"), d['jumpbridge_url'])
+
+            if 'kos_url' in d:
+                self.cache.saveConfigValue("kos_url", d['kos_url'])
+
+            if 'region_name' in d:
+                self.cache.saveConfigValue("region_name", d['region_name'])
+                self.parent.handleRegionChosen()
+
+            if 'quick_regions' in d:
+                self.cache.saveConfigValue("quick_regions", json.dumps(d['quick_regions']))
+                self.parent.updateRegionMenu()
+
+            self.resetChatSettings()
+            self.resetJbs()
+
+        except Exception as e:
+            traceback.print_exc()
+            QMessageBox.critical(None, "Saving quick settings failed", "Error: {0}".format(six.text_type(e)), "OK")

@@ -93,6 +93,7 @@ class Map(object):
             self.soup = BeautifulSoup(svg, 'html.parser')
             self.systems = self._extractSystemsFromSoup(self.soup)
             self._cleanSoup(self.soup)
+            self.setJumpbridgesVisibility(False)
             self.systemsById = {}
             for system in self.systems.values():
                 self.systemsById[system.systemId] = system
@@ -287,7 +288,15 @@ class Map(object):
 
     def changeJumpbridgesVisibility(self):
         newStatus = False if self._jumpMapsVisible else True
+        return self.setJumpbridgesVisibility(newStatus)
+
+    def setJumpbridgesVisibility(self, newStatus):
         value = "visible" if newStatus else "hidden"
+        try:
+            for jb in self.soup.select('path.jb'):
+                jb['visibility'] = value
+        except:
+                pass
         for line in self.soup.select(".jumpbridge"):
             line["visibility"] = value
         self._jumpMapsVisible = newStatus

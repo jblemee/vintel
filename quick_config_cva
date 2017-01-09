@@ -1,0 +1,20 @@
+{
+  "dotlan_jb_id": "",
+  "jumpbridge_url": "",
+  "channels": [
+    "TheCitadel",
+    "North Provi Intel",
+    "North Catch Intel",
+    "North Querious Intel"
+  ],
+  "kos_url": "http://kos.cva-eve.org/api/",
+  "region_name": "Catch",
+  "quick_regions": [
+    {"label": "Catch"},
+    {"label": "Providence"},
+    {"label": "Querious"},
+    {"label": "---"},
+    {"label": "Provi / Catch", "region": "providencecatch"},
+    {"label": "Provi / Catch (compact)", "region": "Providence-catch"}
+  ]
+}
