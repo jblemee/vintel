@@ -165,8 +165,8 @@ class Cache(object):
         if len(founds) == 0:
             return None
         else:
-            # dats is buffer, we convert it back to str
-            data = from_blob(founds[0][0])
+            # data is buffer, we convert it back to str
+            data = from_blob(founds)
             return data
 
     def removeAvatar(self, name):
