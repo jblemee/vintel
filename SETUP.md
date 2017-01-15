@@ -2,7 +2,23 @@
 
 This document describes the settings available in the Vintel application.
 
-## Quick Config
+## Settings Dialog
+
+The settings dialog has three panes: *Quick Setup*, *Jumpbridges*, and *Chat Channels*.
+
+The *Jumpbridges* pane allows you to specify a source for jumpbridges to be 
+rendered on the maps.   You may specify either a DOTLAN jumpbridge list id or an URL to
+a file containing your own jumpbridge list.   More details on the format of the file
+can be seen in the application pane or in *Quick Setup* below.
+
+The *Chat Channels* pane allows you to specify EVE chat channels to monitor for
+intelligence reports.   You must keep this chat channel open in a tab in game
+and have *Log Chat to File* selected in EVE Settings > Chat.   Vintel monitors and
+processes these log files on your local disk.
+
+The *Quick Setup* 
+
+## Quick Setup
 
 The first pane of the settings allows you to paste a quick configuration JSON
 blob that may be provided by your alliance.
@@ -53,3 +69,61 @@ This is what the Vintel defaults would look like as a quick configuration entry:
   ]
 }
 ```
+
+## Other Menu Settings
+
+### File > Clear Cache
+
+If you notice any weirdness with maps or avatars, you may try flushing the Vintel
+cache.  Avatars and maps will be redownloaded.
+
+### Chat > Show Chat
+
+Hide the chat history on the right side of the screen
+
+### Chat > Show Chat Avatars
+
+Do not show character portraits in the chat history.   Unfortunately selecting this
+doesn't yet make the chat window more compact.
+
+### Sound > Activate Sound
+
+This should be checked to enable sound in Vintel.
+
+## Sound > Sound Setup ...
+
+Test the sound configuration.
+
+## Sound > Spoken Notifications
+
+Doesn't work on Windows 10, what does it do?
+
+## Region
+
+Select a region from the quick region shortcuts configured in *Quick Settings*
+
+## Region > Other Region
+
+Select from a list of all known EVE regions.
+
+## Region > Custom Region ...
+
+Displays a freeform text box to enter a standard or custom region by name.
+
+## K.O.S.
+
+Activate some of the Kill On Sight processing and warnings.
+
+## Window > Always On Top
+
+Keep this window above all other windows.
+
+## Window > Frameless Main Window
+
+Remove OS decorations from the window: titlebar, menubar, ...    Once activated a *Restore Frame* button will
+be available in the upper left corner of the screen.  Click that to restore the window decorations.
+
+## Window > Transparency
+
+Set the window opacity.
+
