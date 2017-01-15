@@ -94,36 +94,36 @@ This should be checked to enable sound in Vintel.
 
 Test the sound configuration.
 
-## Sound > Spoken Notifications
+### Sound > Spoken Notifications
 
 Doesn't work on Windows 10, what does it do?
 
-## Region
+### Region
 
 Select a region from the quick region shortcuts configured in *Quick Settings*
 
-## Region > Other Region
+### Region > Other Region
 
 Select from a list of all known EVE regions.
 
-## Region > Custom Region ...
+### Region > Custom Region ...
 
 Displays a freeform text box to enter a standard or custom region by name.
 
-## K.O.S.
+### K.O.S.
 
 Activate some of the Kill On Sight processing and warnings.
 
-## Window > Always On Top
+### Window > Always On Top
 
 Keep this window above all other windows.
 
-## Window > Frameless Main Window
+### Window > Frameless Main Window
 
 Remove OS decorations from the window: titlebar, menubar, ...    Once activated a *Restore Frame* button will
 be available in the upper left corner of the screen.  Click that to restore the window decorations.
 
-## Window > Transparency
+### Window > Transparency
 
 Set the window opacity.
 
