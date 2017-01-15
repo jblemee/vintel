@@ -16,8 +16,6 @@ intelligence reports.   You must keep this chat channel open in a tab in game
 and have *Log Chat to File* selected in EVE Settings > Chat.   Vintel monitors and
 processes these log files on your local disk.
 
-The *Quick Setup* 
-
 ## Quick Setup
 
 The first pane of the settings allows you to paste a quick configuration JSON
