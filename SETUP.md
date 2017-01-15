@@ -90,7 +90,7 @@ doesn't yet make the chat window more compact.
 
 This should be checked to enable sound in Vintel.
 
-## Sound > Sound Setup ...
+### Sound > Sound Setup ...
 
 Test the sound configuration.
 
