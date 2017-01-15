@@ -26,8 +26,10 @@ blob that may be provided by your alliance.
 
    The **region** should match a DOTLAN url - i.e. ht<i></i>tp://evemaps.dotlan.net/map/**Catch**.
    The **region** can also be one of the special or combined maps listed at the
-   bottom of the DOTLAN universe page.
+   bottom of the DOTLAN universe page.  Vintel also recognizes the custom region
+   providencecatch.
 
+This is what the Vintel defaults would look like as a quick configuration entry:
 
 ```
 {
