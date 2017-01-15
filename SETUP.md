@@ -8,7 +8,7 @@ The first pane of the settings allows you to paste a quick configuration JSON
 blob that may be provided by your alliance.
 
 1. *dotlan_jb_id* The id of a jumpbridge list from DOTLAN.  Include just the id,
-   i.e. from http://evemaps.dotlan.net/bridges/*XXXXxxxx* use the XXXXxxxx
+   i.e. from ht<i></i>tp://evemaps.dotlan.net/bridges/*XXXXxxxx* use the XXXXxxxx
 2. *jumpbridge_url* A url to a file containing your bridge list.   Each line
    in the file should contain two systems separated by a `<->`.   i.e.
    `HED-GP <-> 36N-HZ`
@@ -24,7 +24,7 @@ blob that may be provided by your alliance.
    used when looking up this system on DOTLAN if the label is not an exact match
    (spaces will be automatically converted to underscores).
 
-   The region should match a DOTLAN url - i.e. http://evemaps.dotlan.net/map/*Catch*.
+   The region should match a DOTLAN url - i.e. ht<i></i>tp://evemaps.dotlan.net/map/*Catch*.
    The region can also be one of the special or combined maps listed at the
    bottom of the DOTLAN universe page.
 
