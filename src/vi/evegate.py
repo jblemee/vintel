@@ -336,8 +336,10 @@ SHIPNAMES = (u'ABADDON', u'ABSOLUTION', u'AEON', u'AMARR SHUTTLE', u'ANATHEMA', 
              u'TEMPEST TRIBAL ISSUE', u'THANATOS', u'THORAX', u'THRASHER', u'TORMENTOR', u'TRISTAN', u'TYPHOON',
              u'VAGABOND', u'VARGUR', u'VELATOR', u'VENGEANCE', u'VEXOR', u'VEXOR NAVY ISSUE', u'VIATOR', u'VIGIL',
              u'VIGILANT', u'VINDICATOR', u'VISITANT', u'VULTURE', u'WIDOW', u'WOLF', u'WORM', u'WRAITH', u'WREATHE',
-             u'WYVERN', u'ZEALOT', u'CAPSULE', u'BOMBER',
+             u'WYVERN', u'ZEALOT', u'CAPSULE',
+             u'BOMBER', u'LOGI',
              u'T3D', u'JACKDAW', u'SVIPUL', u'CONFESSOR', u'HECTATE',
+             u'T3C', u'TENGU', u'LOKI', u'LEGION', u'PROTEUS',
              u'STORK', u'BIFROST', u'PONTIFEX', u'MAGUS')
 SHIPNAMES = sorted(SHIPNAMES, key=lambda x: len(x), reverse=True)
 

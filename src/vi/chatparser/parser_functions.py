@@ -82,7 +82,8 @@ def parseShips(rtext):
 
     texts = [t for t in rtext.contents if isinstance(t, NavigableString)]
     for text in texts:
-        upperText = re.sub(CHARS_TO_IGNORE_REGEX, ' ', text.strip().upper())
+        # upperText = re.sub(CHARS_TO_IGNORE_REGEX, ' ', text.strip().upper())
+        upperText = text.upper()
         for shipName in evegate.SHIPNAMES:
             if shipName in upperText:
                 hit = True
