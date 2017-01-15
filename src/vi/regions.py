@@ -62,4 +62,5 @@ REGIONS = [
     "Vale of the Silent",
     "Venal",
     "Verge Vendor",
-    "Wicked Creek" ]
+    "Wicked Creek"
+]

@@ -19,11 +19,9 @@ a = Analysis(['vintel.py'],
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 a.datas += [('vi/ui/MainWindow.ui', 'vi/ui/MainWindow.ui', 'DATA'),
-            ('vi/ui/SystemChat.ui', 'vi/ui/SystemChat.ui', 'DATA'),
+            ('vi/ui/SettingsTabs.ui', 'vi/ui/SettingsTabs.ui', 'DATA'),
             ('vi/ui/ChatEntry.ui', 'vi/ui/ChatEntry.ui', 'DATA'),
             ('vi/ui/Info.ui', 'vi/ui/Info.ui', 'DATA'),
-            ('vi/ui/ChatroomsChooser.ui', 'vi/ui/ChatroomsChooser.ui', 'DATA'),
-            ('vi/ui/RegionChooser.ui', 'vi/ui/RegionChooser.ui', 'DATA'),
             ('vi/ui/SoundSetup.ui', 'vi/ui/SoundSetup.ui', 'DATA'),
             ('vi/ui/JumpbridgeChooser.ui', 'vi/ui/JumpbridgeChooser.ui', 'DATA'),
             ('vi/ui/res/qmark.png', 'vi/ui/res/qmark.png', 'DATA'),

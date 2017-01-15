@@ -38,9 +38,9 @@ class AvatarFindThread(QThread):
         self.active = True
 
 
-    def addChatEntry(self, chatEntry, clearCache=False):
+    def addChatEntry(self, chatEntry, clearAvatarCacheForUser=False):
         try:
-            if clearCache:
+            if clearAvatarCacheForUser:
                 cache = Cache()
                 cache.removeAvatar(chatEntry.message.user)
 
@@ -78,6 +78,7 @@ class AvatarFindThread(QThread):
                     lastCall = time.time()
                     if avatar:
                         cache.putAvatar(charname, avatar)
+                        logging.debug("AvatarFindThread storing avatar for %s" % charname)
                 if avatar:
                     logging.debug("AvatarFindThread emit avatar_update for %s" % charname)
                     self.emit(SIGNAL("avatar_update"), chatEntry, avatar)

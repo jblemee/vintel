@@ -36,7 +36,7 @@ from PyQt4.QtGui import QImage, QPixmap, QMessageBox
 from PyQt4.QtWebKit import QWebPage
 from vi import amazon_s3, evegate
 from vi import dotlan, filewatcher
-from vi import states
+from vi import states, systems
 from vi.cache.cache import Cache
 from vi.resources import resourcePath
 from vi.soundmanager import SoundManager
@@ -48,7 +48,7 @@ from PyQt4.QtGui import QAction
 from PyQt4.QtGui import QMessageBox
 
 # Timer intervals
-MESSAGE_EXPIRY_SECS = 20 * 60
+MESSAGE_EXPIRY_SECS = 60 * 60 * 1
 MAP_UPDATE_INTERVAL_MSECS = 4 * 1000
 CLIPBOARD_CHECK_INTERVAL_MSECS = 4 * 1000
 
@@ -86,6 +86,10 @@ class MainWindow(QtGui.QMainWindow):
         self.scanIntelForKosRequestsEnabled = True
         self.initialMapPosition = None
         self.mapPositionsDict = {}
+        self.chatparser = None
+        self.systemsWithRegions = systems.buildUpperKeyedAliases()
+
+        self.chatbox.setTitle("All Intel (past {0} minues)".format(str(MESSAGE_EXPIRY_SECS/60)))
 
         # Load user's toon names
         self.knownPlayerNames = self.cache.getFromCache("known_player_names")
@@ -140,6 +144,7 @@ class MainWindow(QtGui.QMainWindow):
         self.updateRegionMenu()
         self.updateOtherRegionMenu()
         self.setupMap(True)
+        self.replayLogs()
 
 
     def paintEvent(self, event):
@@ -211,7 +216,7 @@ class MainWindow(QtGui.QMainWindow):
                 self.menuRegion.insertAction(orm, menuItem)
 
     def onRegionSelect(self, region):
-        logging.critical("NEW REGION: [%s]" % (region))
+        logging.info("NEW REGION: [%s]", region)
         Cache().saveConfigValue("region_name", region)
         self.handleRegionChosen()
 
@@ -307,10 +312,18 @@ class MainWindow(QtGui.QMainWindow):
         # Load the jumpbridges
         logging.critical("Load jump bridges")
         self.setJumpbridges(self.cache.getConfigValue("jumpbridge_url"))
+
         self.systems = self.dotlan.systems
 
         logging.critical("Creating chat parser")
-        self.chatparser = ChatParser(self.pathToLogs, self.roomnames, self.systems)
+        oldParser = self.chatparser
+        self.chatparser = ChatParser(self.pathToLogs, self.roomnames, self.systemsWithRegions, MESSAGE_EXPIRY_SECS)
+        if oldParser:
+            scrollPosition = self.chatListWidget.verticalScrollBar().value()
+            self.chatListWidget.clear()
+            self.processLogMessages(oldParser.knownMessages)
+            self.chatListWidget.verticalScrollBar().setSliderPosition(scrollPosition)
+            self.chatparser.knownMessages = oldParser.knownMessages
 
         # Menus - only once
         if initialize:
@@ -334,6 +347,7 @@ class MainWindow(QtGui.QMainWindow):
         self.updateMapView()
         self.setInitialMapPositionForRegion(regionName)
         self.mapTimer.start(MAP_UPDATE_INTERVAL_MSECS)
+
         # Allow the file watcher to run now that all else is set up
         self.filewatcherThread.paused = False
         logging.critical("Map setup complete")
@@ -576,8 +590,24 @@ class MainWindow(QtGui.QMainWindow):
 
 
     def markSystemOnMap(self, systemname):
-        self.systems[six.text_type(systemname)].mark()
-        self.updateMapView()
+        n = six.text_type(systemname)
+        if n in self.systems:
+            self.systems[n].mark()
+            self.updateMapView()
+        elif n.upper() in self.systemsWithRegions:
+            logging.warn('System [%s] is in another region [%s]',
+                self.systemsWithRegions[n]['name'], self.systemsWithRegions[n]['region'])
+            ans = QMessageBox.question(self,
+                u"System not on current map",
+                u"{0} is in {1}.  Would you like to view the {1} map?".format(
+                    six.text_type(self.systemsWithRegions[n]['name']),
+                    six.text_type(self.systemsWithRegions[n]['region'])),
+                QMessageBox.Ok, QMessageBox.Cancel)
+            if QMessageBox.Ok == ans:
+                self.onRegionSelect(self.systemsWithRegions[n]['region'])
+                self.markSystemOnMap(systemname)
+        else:
+            logging.warn('System [%s] is unknown.', n)
 
 
     def setLocation(self, char, newSystem):
@@ -585,7 +615,7 @@ class MainWindow(QtGui.QMainWindow):
             system.removeLocatedCharacter(char)
         if not newSystem == "?" and newSystem in self.systems:
             self.systems[newSystem].addLocatedCharacter(char)
-            self.setMapContent(self.dotlan.svg)
+            self.updateMapView()
 
 
     def setMapContent(self, content):
@@ -674,6 +704,16 @@ class MainWindow(QtGui.QMainWindow):
         self.connect(chooser, SIGNAL("new_region_chosen"), self.handleRegionChosen)
         chooser.show()
 
+    def replayLogs(self):
+        """On startup, replay info from logfiles"""
+        messages = []
+        for path in self.chatparser.rewind():
+            messages.extend(self.chatparser.fileModified(path))
+        messages.sort(key=lambda x: x.timestamp)
+        # we use these parsed messages to replay events on region switch, reset them to a time ordered list
+        self.chatparser.knownMessages = messages
+        self.processLogMessages(messages)
+        logging.critical("Done with replay")
 
     def addMessageToIntelChat(self, message):
         scrollToBottom = False
@@ -694,6 +734,7 @@ class MainWindow(QtGui.QMainWindow):
 
 
     def pruneMessages(self):
+        self.chatparser.expire()
         try:
             now = time.mktime(evegate.currentEveTime().timetuple())
             for row in range(self.chatListWidget.count()):
@@ -774,7 +815,7 @@ class MainWindow(QtGui.QMainWindow):
     def updateAvatarOnChatEntry(self, chatEntry, avatarData):
         updated = chatEntry.updateAvatar(avatarData)
         if not updated:
-            self.avatarFindThread.addChatEntry(chatEntry, clearCache=True)
+            self.avatarFindThread.addChatEntry(chatEntry) # , clearCache=True)
         else:
             self.emit(SIGNAL("avatar_loaded"), chatEntry.message.user, avatarData)
 
@@ -806,7 +847,14 @@ class MainWindow(QtGui.QMainWindow):
 
     def logFileChanged(self, path):
         messages = self.chatparser.fileModified(path)
+        self.processLogMessages(messages)
+
+    def processLogMessages(self, messages):
         for message in messages:
+
+            # This function is a resource pig, give others a chance to run while we process messages
+            time.sleep(0)
+
             # If players location has changed
             if message.status == states.LOCATION:
                 self.knownPlayerNames.add(message.user)
@@ -825,11 +873,13 @@ class MainWindow(QtGui.QMainWindow):
                 self.addMessageToIntelChat(message)
                 # For each system that was mentioned in the message, check for alarm distance to the current system
                 # and alarm if within alarm distance.
-                systemList = self.dotlan.systems
                 if message.systems:
-                    for system in message.systems:
-                        systemname = system.name
-                        systemList[systemname].setStatus(message.status)
+                    for systemname in message.systems:
+                        if not systemname in self.systems:
+                            logging.debug("No dotlan match for system [%s], maybe it's not shown right now:", systemname)
+                            continue
+                        system = self.systems[systemname]
+                        system.setStatus(message.status, message.timestamp)
                         if message.status in (states.REQUEST, states.ALARM) and message.user not in self.knownPlayerNames:
                             alarmDistance = self.alarmDistance if message.status == states.ALARM else 0
                             for nSystem, data in system.getNeighbours(alarmDistance).items():
@@ -837,8 +887,10 @@ class MainWindow(QtGui.QMainWindow):
                                 chars = nSystem.getLocatedCharacters()
                                 if len(chars) > 0 and message.user not in chars:
                                     self.trayIcon.showNotification(message, system.name, ", ".join(chars), distance)
-                self.setMapContent(self.dotlan.svg)
+                        system.messages.append(message)
 
+        # call once after all messages are processed
+        self.updateMapView()
 
 class RegionChooser(QtGui.QDialog):
     def __init__(self, parent):
@@ -893,13 +945,16 @@ class SystemChat(QtGui.QDialog):
         self.parent = parent
         self.chatType = 0
         self.selector = selector
-        self.chatEntries = []
-        for entry in chatEntries:
-            self.addChatEntry(entry)
         titleName = ""
+        self.chatEntries = []
         if self.chatType == SystemChat.SYSTEM:
-            titleName = "%s [%s]" % (self.selector.name, self.selector.secondaryInfo)
             self.system = selector
+            systemDisplayName = self.system.name
+            if systemDisplayName in parent.systemsWithRegions:
+                systemDisplayName = parent.systemsWithRegions[systemDisplayName]['name']
+            titleName = "%s [%s]" % (systemDisplayName, self.selector.secondaryInfo)
+            for entry in chatEntries:
+                self.addChatEntry(entry)
         for name in knownPlayerNames:
             self.playerNamesBox.addItem(name)
         self.setWindowTitle("Chat for {0}".format(titleName))
@@ -928,10 +983,12 @@ class SystemChat(QtGui.QDialog):
     def addChatEntry(self, entry):
         if self.chatType == SystemChat.SYSTEM:
             message = entry.message
-            avatarPixmap = entry.avatarLabel.pixmap()
-            if self.selector in message.systems:
-                self._addMessageToChat(message, avatarPixmap)
-
+            try:
+                avatarPixmap = entry.avatarLabel.pixmap()
+                if self.system.name in message.systems:
+                    self._addMessageToChat(message, avatarPixmap)
+            except:
+                pass
 
     def locationSet(self):
         char = six.text_type(self.playerNamesBox.currentText())
@@ -1003,7 +1060,10 @@ class ChatEntryWidget(QtGui.QWidget):
         if pixmap.isNull():
             return False
         scaledAvatar = pixmap.scaled(32, 32)
-        self.avatarLabel.setPixmap(scaledAvatar)
+        try:
+            self.avatarLabel.setPixmap(scaledAvatar)
+        except:
+            pass
         return True
 
 

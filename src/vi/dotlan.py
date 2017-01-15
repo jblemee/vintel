@@ -23,6 +23,7 @@
 
 import math
 import time
+import datetime
 import six
 import requests
 import logging
@@ -318,11 +319,17 @@ class System(object):
         A System on the Map
     """
 
-    ALARM_COLORS = [(60 * 4, "#FF0000", "#FFFFFF"), (60 * 10, "#FF9B0F", "#FFFFFF"), (60 * 15, "#FFFA0F", "#000000"),
-                    (60 * 25, "#FFFDA2", "#000000"), (60 * 60 * 24, "#FFFFFF", "#000000")]
-    ALARM_COLOR = ALARM_COLORS[0][1]
     UNKNOWN_COLOR = "#FFFFFF"
     CLEAR_COLOR = "#59FF6C"
+    ALARM_COLORS = [
+        # Alarmed systems change colors based on how long ago the alarm was received
+        # maxDiff (seconds), system background color, timer text color
+        (60 * 4, "#FF0000", "#FFFFFF"),
+        (60 * 10, "#FF9B0F", "#FFFFFF"),
+        (60 * 15, "#FFFA0F", "#000000"),
+        (60 * 25, "#FFFDA2", "#000000"),
+        (60 * 60 * 24, "#FFFFFF", "#000000")
+    ]
 
     def __init__(self, name, secondaryInfo, svgElement, mapSoup, mapCoordinates, transform, systemId):
         self.status = states.UNKNOWN
@@ -333,11 +340,11 @@ class System(object):
         self.origSvgElement = svgElement
         self.rect = svgElement.select("rect")[0]
         self.secondLine = svgElement.select("text")[1]
-        self.lastAlarmTime = 0
+        self.lastAlarmTime = datetime.datetime.min
         self.messages = []
         self.setStatus(states.UNKNOWN)
         self.__locatedCharacters = []
-        self.backgroundColor = "#FFFFFF"
+        self.backgroundColor = self.UNKNOWN_COLOR
         self.mapCoordinates = mapCoordinates
         self.systemId = systemId
         self.transform = transform
@@ -452,16 +459,21 @@ class System(object):
         if self in system._neighbours:
             system._neigbours.remove(self)
 
-    def setStatus(self, newStatus):
+    def setStatus(self, newStatus, statusTime = None):
+        if None == statusTime:
+            statusTime = evegate.currentEveTime()
         if newStatus == states.ALARM:
-            self.lastAlarmTime = time.time()
+            self.lastAlarmTime = statusTime
             if "stopwatch" not in self.secondLine["class"]:
                 self.secondLine["class"].append("stopwatch")
             self.secondLine["alarmtime"] = self.lastAlarmTime
             self.secondLine["style"] = "fill: #FFFFFF;"
-            self.setBackgroundColor(self.ALARM_COLOR)
+            delta = (evegate.currentEveTime() - self.lastAlarmTime).total_seconds()
+            for maxDiff, alarmColor, secondLineColor in self.ALARM_COLORS:
+                if delta < maxDiff:
+                    self.setBackgroundColor(alarmColor)
         elif newStatus == states.CLEAR:
-            self.lastAlarmTime = time.time()
+            self.lastAlarmTime = statusTime
             self.setBackgroundColor(self.CLEAR_COLOR)
             self.secondLine["alarmtime"] = 0
             if "stopwatch" not in self.secondLine["class"]:
@@ -491,7 +503,7 @@ class System(object):
     def update(self):
         # state changed?
         if (self.status == states.ALARM):
-            alarmTime = time.time() - self.lastAlarmTime
+            alarmTime = (evegate.currentEveTime() - self.lastAlarmTime).total_seconds()
             for maxDiff, alarmColor, secondLineColor in self.ALARM_COLORS:
                 if alarmTime < maxDiff:
                     if self.backgroundColor != alarmColor:
@@ -502,7 +514,7 @@ class System(object):
                         self.secondLine["style"] = "fill: {0};".format(secondLineColor)
                     break
         if self.status in (states.ALARM, states.WAS_ALARMED, states.CLEAR):  # timer
-            diff = math.floor(time.time() - self.lastAlarmTime)
+            diff = (evegate.currentEveTime() - self.lastAlarmTime).total_seconds()
             minutes = int(math.floor(diff / 60))
             seconds = int(diff - minutes * 60)
             string = "{m:02d}:{s:02d}".format(m=minutes, s=seconds)
