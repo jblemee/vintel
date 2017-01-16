@@ -33,7 +33,7 @@ from PyQt5 import QtWidgets, QtGui, uic, QtCore
 from PyQt5.QtCore import pyqtSignal, QSettings, QPoint, QByteArray
 from PyQt5.QtWidgets import QMessageBox, QAction, QActionGroup, QStyleOption, QStyle, QSystemTrayIcon, QDialog, QWidget
 from PyQt5.QtGui import QImage, QPixmap, QPainter
-from vi import amazon_s3, evegate, dotlan, filewatcher, states, version
+from vi import amazon_s3, evegate, dotlan, filewatcher, states, systems, version
 from vi.cache.cache import Cache
 from vi.resources import resourcePath
 from vi.soundmanager import SoundManager
@@ -42,7 +42,7 @@ from vi.ui.systemtray import TrayContextMenu
 from vi.regions import REGIONS
 from vi.chatparser.chatparser import ChatParser, Message
 
-OLD_STYLE_WEBKIT = "OLD_STYLE_WEBKIT" in os.environ
+OLD_STYLE_WEBKIT = True # "OLD_STYLE_WEBKIT" in os.environ  #TODO - SET SOMETHING?
 
 if OLD_STYLE_WEBKIT:
     from PyQt5.QtWebKitWidgets import QWebPage
@@ -57,8 +57,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
     chatMessageAdded = pyqtSignal(object)
     avatarLoaded = pyqtSignal(str, object)
-    setJumpbridgeUrl = pyqtSignal(str)
-    roomsChanged = pyqtSignal(object)
     oldStyleWebKit = OLD_STYLE_WEBKIT
 
     def __init__(self, pathToLogs, trayIcon, backGroundColor):
@@ -209,13 +207,14 @@ class MainWindow(QtWidgets.QMainWindow):
                 else:
                     region = label
                 menuItem = self.menuRegion.addAction(label)
-                receiver = lambda region=region: self.onRegionSelect(region)
-                self.menuItem.triggered.connect(receiver)
+                #receiver = lambda region=region: self.onRegionSelect(region)
+                logging.critical('Assigning lambda ' + region)
+                menuItem.triggered.connect(lambda region=region: self.onRegionSelect(region))
                 self.menuRegion.insertAction(orm, menuItem)
 
 
     def onRegionSelect(self, region):
-        logging.info("NEW REGION: [%s]", region)
+        logging.critical("NEW REGION: [%s]", region)
         Cache().saveConfigValue("region_name", region)
         self.handleRegionChosen()
 
@@ -809,7 +808,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def showRegionChooser(self):
         chooser = RegionChooser(self)
-        chooser.newRegionChosen.connect(handleRegionChosen)
+        chooser.newRegionChosen.connect(self.handleRegionChosen)
         chooser.show()
 
     def replayLogs(self):
@@ -1190,8 +1189,12 @@ class ChatEntryWidget(QWidget):
 
 
 class Settings(QDialog):
+
+    setJumpbridgeUrl = pyqtSignal(str)
+    roomsChanged = pyqtSignal(object)
+
     def __init__(self, parent):
-        QtGui.QDialog.__init__(self, parent)
+        QDialog.__init__(self, parent)
         uic.loadUi(resourcePath("vi/ui/SettingsTabs.ui"), self)
         self.cache = Cache()
         self.parent = parent
