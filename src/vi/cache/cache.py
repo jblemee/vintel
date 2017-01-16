@@ -174,3 +174,6 @@ class Cache(object):
             query = "DELETE FROM avatars WHERE charname = ?"
             self.con.execute(query, (name,))
             self.con.commit()
+
+
+

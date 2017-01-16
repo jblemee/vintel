@@ -30,6 +30,7 @@ from bs4 import BeautifulSoup
 from vi import states, evegate
 
 
+
 from .parser_functions import parseStatus
 from .parser_functions import parseUrls, parseShips, parseSystems
 
