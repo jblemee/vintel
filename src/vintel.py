@@ -26,13 +26,14 @@ import traceback
 from logging.handlers import RotatingFileHandler
 from logging import StreamHandler
 
-from PyQt4 import QtGui
+from PyQt5 import QtGui, QtWidgets
+from PyQt5.QtCore import QT_VERSION_STR
+from PyQt5.QtWidgets import QApplication, QMessageBox
 from vi import version
 from vi.ui import viui, systemtray
 from vi.cache import cache
 from vi.resources import resourcePath
 from vi.cache.cache import Cache
-from PyQt4.QtGui import QApplication, QMessageBox
 
 
 def exceptHook(exceptionType, exceptionValue, tracebackObject):
@@ -76,7 +77,10 @@ class Application(QApplication):
                                           "p_drive", "User", "My Documents", "EVE", "logs", "Chatlogs")
             elif sys.platform.startswith("linux"):
                 chatLogDirectory = os.path.join(os.path.expanduser("~"), "EVE", "logs", "Chatlogs")
-            elif sys.platform.startswith("win32") or sys.platform.startswith("cygwin"):
+                if not os.path.exists(chatLogDirectory):
+                    # Default path created by EveLauncher:  https://forums.eveonline.com/default.aspx?g=posts&t=482663
+                    chatLogDirectory = os.path.join(os.path.expanduser("~"), "Documents","EVE", "logs", "Chatlogs")
+            elif sys.platform.startswith("win32"):
                 import ctypes.wintypes
                 from win32com.shell import shellcon
                 buf = ctypes.create_unicode_buffer(ctypes.wintypes.MAX_PATH)
@@ -99,7 +103,7 @@ class Application(QApplication):
         if not os.path.exists(vintelLogDirectory):
             os.mkdir(vintelLogDirectory)
 
-        splash = QtGui.QSplashScreen(QtGui.QPixmap(resourcePath("vi/ui/res/logo.png")))
+        splash = QtWidgets.QSplashScreen(QtGui.QPixmap(resourcePath("vi/ui/res/logo.png")))
 
         vintelCache = Cache()
         logLevel = vintelCache.getConfigValue("logging_level")
@@ -129,15 +133,19 @@ class Application(QApplication):
         logging.critical("")
         logging.critical("------------------- Vintel %s starting up -------------------", version.VERSION)
         logging.critical("")
+        logging.critical("QT version %s", QT_VERSION_STR)
         logging.debug("Looking for chat logs at: %s", chatLogDirectory)
         logging.debug("Cache maintained here: %s", cache.Cache.PATH_TO_CACHE)
         logging.debug("Writing logs to: %s", vintelLogDirectory)
+
+        self.setOrganizationName("Vintel Development Team")
+        self.setOrganizationDomain("https://github.com/Xanthos-Eve/vintel")
+        self.setApplicationName("Vintel")
 
         trayIcon = systemtray.TrayIcon(self)
         trayIcon.show()
         self.mainWindow = viui.MainWindow(chatLogDirectory, trayIcon, backGroundColor)
         self.mainWindow.show()
-        self.mainWindow.raise_()
         splash.finish(self.mainWindow)
 
 

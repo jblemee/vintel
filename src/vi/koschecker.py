@@ -20,8 +20,8 @@
 import logging
 import requests
 
-from vi import evegate
 from requests.exceptions import RequestException
+from vi import evegate
 
 UNKNOWN = "No Result"
 NOT_KOS = 'Not Kos'
@@ -36,12 +36,8 @@ def check(parts):
     namesAsIds = {}
     names = [name.strip() for name in parts]
 
-    kos_url = Cache().getConfigValue("kos_url")
-    if not kos_url:
-        kos_url = CVA_KOS_URL
-
     try:
-        kosData = requests.get(kos_url, params = {'c': 'json', 'type': 'multi', 'q': ','.join(names)}).json()
+        kosData = requests.get(CVA_KOS_URL, params = {'c': 'json', 'type': 'multi', 'q': ','.join(names)}).json()
     except RequestException as e:
         kosData = None
         logging.error("Error on pilot KOS check request %s", str(e))
@@ -99,7 +95,7 @@ def check(parts):
 
         for corp in corpsToCheck:
             try:
-                kosData = requests.get(kos_url, params = { 'c': 'json', 'type': 'unit', 'q': corp }).json()
+                kosData = requests.get(CVA_KOS_URL, params = { 'c': 'json', 'type': 'unit', 'q': corp }).json()
             except RequestException as e:
                 logging.error("Error on corp KOS check request: %s", str(e))
 

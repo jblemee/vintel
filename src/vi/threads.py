@@ -21,8 +21,9 @@ import time
 import logging
 import six
 
-from six.moves import queue
-from PyQt4.QtCore import QThread, SIGNAL, QTimer
+#from six.moves import queue
+from six.moves.queue import Queue
+from PyQt5.QtCore import pyqtSignal, QThread, QTimer
 from vi import evegate
 from vi import koschecker
 from vi.cache.cache import Cache
@@ -32,15 +33,17 @@ STATISTICS_UPDATE_INTERVAL_MSECS = 1 * 60 * 1000
 
 class AvatarFindThread(QThread):
 
+    avatarUpdate = pyqtSignal(object, object)
+
     def __init__(self):
         QThread.__init__(self)
-        self.queue = queue.Queue()
+        self.queue = Queue()
         self.active = True
 
 
-    def addChatEntry(self, chatEntry, clearAvatarCacheForUser=False):
+    def addChatEntry(self, chatEntry, clearCache=False):
         try:
-            if clearAvatarCacheForUser:
+            if clearCache:
                 cache = Cache()
                 cache.removeAvatar(chatEntry.message.user)
 
@@ -78,10 +81,9 @@ class AvatarFindThread(QThread):
                     lastCall = time.time()
                     if avatar:
                         cache.putAvatar(charname, avatar)
-                        logging.debug("AvatarFindThread storing avatar for %s" % charname)
                 if avatar:
                     logging.debug("AvatarFindThread emit avatar_update for %s" % charname)
-                    self.emit(SIGNAL("avatar_update"), chatEntry, avatar)
+                    self.avatarUpdate.emit(chatEntry, avatar)
             except Exception as e:
                 logging.error("Error in AvatarFindThread : %s", e)
 
@@ -94,9 +96,11 @@ class AvatarFindThread(QThread):
 
 class KOSCheckerThread(QThread):
 
+    showKos = pyqtSignal(str, str, str, bool)
+
     def __init__(self):
         QThread.__init__(self)
-        self.queue = queue.Queue()
+        self.queue = Queue()
         self.recentRequestNamesAndTimes = {}
         self.active = True
 
@@ -142,7 +146,7 @@ class KOSCheckerThread(QThread):
 
             logging.info("KOSCheckerThread emitting kos_result for: state = {0}, text = {1}, requestType = {2}, hasKos = {3}".format(
                     "ok", text, requestType, hasKos))
-            self.emit(SIGNAL("kos_result"), "ok", text, requestType, hasKos)
+            self.showKos.emit("ok", text, requestType, hasKos)
 
     def quit(self):
         self.active = False
@@ -152,9 +156,11 @@ class KOSCheckerThread(QThread):
 
 class MapStatisticsThread(QThread):
 
+    updateMap = pyqtSignal(dict)
+
     def __init__(self):
         QThread.__init__(self)
-        self.queue = queue.Queue(maxsize=1)
+        self.queue = Queue(maxsize=1)
         self.lastStatisticsUpdate = time.time()
         self.pollRate = STATISTICS_UPDATE_INTERVAL_MSECS
         self.refreshTimer = None
@@ -167,7 +173,7 @@ class MapStatisticsThread(QThread):
 
     def run(self):
         self.refreshTimer = QTimer()
-        self.connect(self.refreshTimer, SIGNAL("timeout()"), self.requestStatistics)
+        self.refreshTimer.timeout.connect(self.requestStatistics)
         while True:
             # Block waiting for requestStatistics() to enqueue a token
             self.queue.get()
@@ -184,7 +190,7 @@ class MapStatisticsThread(QThread):
                 requestData = {"result": "error", "text": six.text_type(e)}
             self.lastStatisticsUpdate = time.time()
             self.refreshTimer.start(self.pollRate)
-            self.emit(SIGNAL("statistic_data_update"), requestData)
+            self.updateMap.emit(requestData)
             logging.debug("MapStatisticsThread emitted statistic_data_update")
 
 

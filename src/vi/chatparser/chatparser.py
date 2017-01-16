@@ -22,12 +22,13 @@ import os
 import time
 import logging
 import six
+
+from PyQt5.QtWidgets import QMessageBox
 if six.PY2:
     from io import open
-
 from bs4 import BeautifulSoup
 from vi import states, evegate
-from PyQt4.QtGui import QMessageBox
+
 
 from .parser_functions import parseStatus
 from .parser_functions import parseUrls, parseShips, parseSystems
