@@ -18,6 +18,7 @@
 ###########################################################################
 
 import datetime
+import functools
 import os
 import sys
 import time
@@ -30,7 +31,7 @@ import logging
 import vi
 
 from PyQt5 import QtWidgets, QtGui, uic, QtCore
-from PyQt5.QtCore import pyqtSignal, QSettings, QPoint, QByteArray
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, QSettings, QPoint, QByteArray
 from PyQt5.QtWidgets import QMessageBox, QAction, QActionGroup, QStyleOption, QStyle, QSystemTrayIcon, QDialog, QWidget
 from PyQt5.QtGui import QImage, QPixmap, QPainter
 from vi import amazon_s3, evegate, dotlan, filewatcher, states, systems, version
@@ -158,7 +159,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def wheelEvent(self,event):
         if event.modifiers() & QtCore.Qt.ControlModifier:
-            steps = event.delta() // 120
+            steps = event.angleDelta().y() // 120
             vector = steps and steps // abs(steps) # 0, 1, or -1
             for step in range(1, abs(steps) + 1):
                 self.mapView.setZoomFactor(self.mapView.zoomFactor() + vector * 0.1)
@@ -181,8 +182,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def updateOtherRegionMenu(self):
         for region in REGIONS:
             menuItem = self.otherRegionSubmenu.addAction(region)
-            receiver = lambda region=region: self.onRegionSelect(region)
-            menuItem.triggered.connect(receiver)
+            menuItem.triggered.connect(functools.partial(self.onRegionSelect, region))
             self.otherRegionSubmenu.addAction(menuItem)
 
 
@@ -207,12 +207,11 @@ class MainWindow(QtWidgets.QMainWindow):
                 else:
                     region = label
                 menuItem = self.menuRegion.addAction(label)
-                #receiver = lambda region=region: self.onRegionSelect(region)
-                logging.critical('Assigning lambda ' + region)
-                menuItem.triggered.connect(lambda region=region: self.onRegionSelect(region))
+                menuItem.triggered.connect(functools.partial(self.onRegionSelect, region))
                 self.menuRegion.insertAction(orm, menuItem)
 
 
+    @pyqtSlot(str)
     def onRegionSelect(self, region):
         logging.critical("NEW REGION: [%s]", region)
         Cache().saveConfigValue("region_name", region)
