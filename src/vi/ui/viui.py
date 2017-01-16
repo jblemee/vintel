@@ -42,7 +42,7 @@ from vi.ui.systemtray import TrayContextMenu
 from vi.regions import REGIONS
 from vi.chatparser.chatparser import ChatParser, Message
 
-OLD_STYLE_WEBKIT = True # "OLD_STYLE_WEBKIT" in os.environ  #TODO - SET SOMETHING?
+OLD_STYLE_WEBKIT = "OLD_STYLE_WEBKIT" in os.environ
 
 if OLD_STYLE_WEBKIT:
     from PyQt5.QtWebKitWidgets import QWebPage
