@@ -49,6 +49,8 @@ from vi.systems import SYSTEMS
 # Do not ignore ? which triggers status change to request
 CHARS_TO_IGNORE_REGEX = '[*,!.()]'
 
+REPLACE_WORD_REGEX = r'(^|(?<=[^0-9a-zA-Z_-])){0}((?=[^0-9a-zA-Z_])|$)'
+
 
 def textReplace(element, newText):
     newText = "<t>" + newText + "</t>"
@@ -79,7 +81,8 @@ def parseStatus(rtext):
 def parseShips(rtext):
     def formatShipName(text, word):
         newText = u"""<span style="color:#d95911;font-weight:bold">{0}</span>"""
-        text = text.replace(word, newText.format(word))
+        # Only do replacements at word boundaries
+        text = re.sub(REPLACE_WORD_REGEX.format(word), newText.format(word), text)
         return text
 
     texts = [t for t in rtext.contents if isinstance(t, NavigableString)]
@@ -109,11 +112,13 @@ def parseSystems(systems, rtext, foundSystems):
 
     # words to ignore on the system parser. use UPPER CASE
     WORDS_TO_IGNORE = ("IN", "IS", "AS", "OR", "NV", "TO", "ME", "HE", "SHE", "YOU", "ARE",
-        "ON", "HAS", "OF", "IT", "GET", "IF", "THE", "HOT", "OH", "OK", "GJ", "AND", "MY")
+        "ON", "HAS", "OF", "IT", "GET", "IF", "THE", "HOT", "OH", "OK", "GJ", "AND", "MY",
+        "SAY", "ANY", "NO", "FOR", "OUT", "WH", "MAN", "PART", "AT", "AN" )
 
     def formatSystem(text, word, system):
         newText = u"""<a style="color:#CC8800;font-weight:bold" href="mark_system/{0}">{1}</a>"""
-        text = text.replace(word, newText.format(system, word))
+        # Only do replacements at word boundaries: "no cyno onboard"  would replace both "no"s in the first pass and then find a "cy"
+        text = re.sub(REPLACE_WORD_REGEX.format(word), newText.format(system, word), text)
         return text
 
     texts = [t for t in rtext.contents if isinstance(t, NavigableString) and len(t)]
@@ -144,11 +149,11 @@ def parseSystems(systems, rtext, foundSystems):
             upperWord = word.upper()
             if upperWord != word and upperWord in WORDS_TO_IGNORE: continue
             if upperWord in systemNames:  # - direct hit on name
-                matchKey = upperWord
+                matchKey = systems[upperWord]['name']
             elif 1 < len(upperWord) < 5:  # - upperWord 2-4 chars.
                 for system in systemNames:  # system begins with?
                     if system.startswith(upperWord):
-                        matchKey = system
+                        matchKey = systems[system]['name']
                         break
             if matchKey:
                 foundSystems.add(matchKey)
