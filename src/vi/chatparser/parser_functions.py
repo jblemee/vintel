@@ -45,7 +45,9 @@ from bs4.element import NavigableString
 from vi import states
 from vi.systems import SYSTEMS
 
-CHARS_TO_IGNORE_REGEX = '[*?,!.()]'
+# Do not ignore <>/" which keep html from word matching on replacement
+# Do not ignore ? which triggers status change to request
+CHARS_TO_IGNORE_REGEX = '[*,!.()]'
 
 
 def textReplace(element, newText):
@@ -61,14 +63,14 @@ def textReplace(element, newText):
 def parseStatus(rtext):
     texts = [t for t in rtext.contents if isinstance(t, NavigableString)]
     for text in texts:
-        # upperText = re.sub(CHARS_TO_IGNORE_REGEX, '', text.strip().upper()) # KEEP QUESTION MARK?
+        upperText = re.sub(CHARS_TO_IGNORE_REGEX, ' ', text.strip().upper()) # KEEP QUESTION MARK?
         upperText = text.strip().upper()
         upperWords = upperText.split()
-        if (("CLEAR" in upperWords or "CLR" in upperWords) and not upperText.endswith("?")):
+        if ("?" in upperText):
+            return states.REQUEST
+        elif ("CLEAR" in upperWords or "CLR" in upperWords):
             return states.CLEAR
         elif ("STAT" in upperWords or "STATUS" in upperWords):
-            return states.REQUEST
-        elif ("?" in upperText):
             return states.REQUEST
         elif (text.strip().upper() in ("BLUE", "BLUES ONLY", "ONLY BLUE" "STILL BLUE", "ALL BLUES")):
             return states.CLEAR
@@ -82,7 +84,7 @@ def parseShips(rtext):
 
     texts = [t for t in rtext.contents if isinstance(t, NavigableString)]
     for text in texts:
-        # upperText = re.sub(CHARS_TO_IGNORE_REGEX, ' ', text.strip().upper())
+        upperText = re.sub(CHARS_TO_IGNORE_REGEX, ' ', text.upper())
         upperText = text.upper()
         for shipName in evegate.SHIPNAMES:
             if shipName in upperText:
@@ -90,9 +92,11 @@ def parseShips(rtext):
                 start = upperText.find(shipName)
                 end = start + len(shipName)
                 if ( (start > 0 and re.match('[A-Z0-9]', upperText[start - 1]))
-                        or (end < len(upperText) - 1 and re.match('[A-RT-Z0-9]', upperText[end])) ):
+                        or (end < len(upperText) and re.match('[A-RT-Z0-9]', upperText[end])) ):
                     hit = False
                 if hit:
+                    if (end < len(upperText) and 'S' == upperText[end]):
+                        end += 1
                     shipInText = text[start:end]
                     formatted = formatShipName(text, shipInText)
                     textReplace(text, formatted)
@@ -114,7 +118,7 @@ def parseSystems(systems, rtext, foundSystems):
 
     texts = [t for t in rtext.contents if isinstance(t, NavigableString) and len(t)]
     for text in texts:
-        worktext = re.sub(CHARS_TO_IGNORE_REGEX, '', text)
+        worktext = re.sub(CHARS_TO_IGNORE_REGEX, ' ', text)
 
         # Drop redundant whitespace so as to not throw off word index
         worktext = ' '.join(worktext.split())
@@ -146,13 +150,6 @@ def parseSystems(systems, rtext, foundSystems):
                     if system.startswith(upperWord):
                         matchKey = system
                         break
-                if None == matchKey and not '-' in upperWord:
-	                for system in systemNames:  # what if F-YH58 is named FY?
-	                    clearedSystem = system.replace("-", "")
-	                    if clearedSystem.startswith(upperWord):
-	                        matchKey = system
-                            break
-
             if matchKey:
                 foundSystems.add(matchKey)
                 formattedText = formatSystem(text, word, matchKey)
