@@ -49,7 +49,7 @@ from vi.systems import SYSTEMS
 # Do not ignore ? which triggers status change to request
 CHARS_TO_IGNORE_REGEX = '[*,!.()]'
 
-REPLACE_WORD_REGEX = r'(^|(?<=[^0-9a-zA-Z_-])){0}((?=[^0-9a-zA-Z_])|$)'
+REPLACE_WORD_REGEX = r'(^|(?<=[^0-9a-zA-Z])){0}((?=[^0-9a-zA-Z_])|$)'
 
 
 def textReplace(element, newText):
