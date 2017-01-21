@@ -17,6 +17,7 @@
 #  along with this program.	 If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+import logging
 import sqlite3
 import threading
 import time
@@ -107,6 +108,13 @@ class Cache(object):
         """
         return self.putIntoCache(key, value, sys.maxsize)
 
+    def dumpConfig(self):
+        if logging.getLogger().isEnabledFor(logging.DEBUG):
+            query = "SELECT key, data FROM cache WHERE maxage = ?"
+            logging.debug("SETTINGS: ")
+            for row in self.con.execute(query, (sys.maxsize,)).fetchall():
+                logging.debug(str(row))
+
     def deleteFromCache(self, key):
         """ Deleteing from cache
         """
@@ -121,6 +129,14 @@ class Cache(object):
         with Cache.SQLITE_WRITE_LOCK:
             query = "DELETE FROM cache WHERE maxAge < ?"
             self.con.execute(query, (sys.maxsize,))
+            self.con.commit()
+
+    def clear(self):
+        """ Delete all entries from cache
+        """
+        with Cache.SQLITE_WRITE_LOCK:
+            query = "DELETE FROM cache"
+            self.con.execute(query)
             self.con.commit()
 
     def putPlayerName(self, name, status):
@@ -174,6 +190,3 @@ class Cache(object):
             query = "DELETE FROM avatars WHERE charname = ?"
             self.con.execute(query, (name,))
             self.con.commit()
-
-
-

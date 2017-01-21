@@ -22,6 +22,7 @@ import sys
 import os
 import logging
 import traceback
+import argparse
 
 from logging.handlers import RotatingFileHandler
 from logging import StreamHandler
@@ -64,10 +65,29 @@ class Application(QApplication):
             myappid = u'eve.vintel.' + version.VERSION
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
+        logLevel = None
+        oneTimeOptions = {}
+
         # Set up paths
         chatLogDirectory = ""
-        if len(sys.argv) > 1:
-            chatLogDirectory = sys.argv[1]
+        for p, v in enumerate(sys.argv):
+            if 0 == p:
+                continue
+            if '--debug' == v:
+                logLevel = logging.DEBUG
+            elif '--info' == v:
+                logLevel = logging.INFO
+            elif '--warn' == v:
+                logLevel = logging.WARN
+            elif '--nosound' == v:
+                nothing = 1
+                oneTimeOptions['NO_SOUND'] = True
+            elif '--noreplay' == v:
+                oneTimeOptions['NO_REPLAY'] = True
+            elif '--clear' == c:
+                oneTimeOptions['CLEAR_CACHE'] = True
+            else:
+                chatLogDirectory = v
 
         if not os.path.exists(chatLogDirectory):
             if sys.platform.startswith("darwin") or sys.platform.startswith("cygwin"):
@@ -106,7 +126,10 @@ class Application(QApplication):
         splash = QtWidgets.QSplashScreen(QtGui.QPixmap(resourcePath("vi/ui/res/logo.png")))
 
         vintelCache = Cache()
-        logLevel = vintelCache.getConfigValue("logging_level")
+        if 'CLEAR_CACHE' in oneTimeOptions and oneTimeOptions['CLEAR_CACHE']:
+            vintelCache.clear()
+        if not logLevel:
+            logLevel = vintelCache.getConfigValue("logging_level")
         if not logLevel:
             logLevel = logging.WARN
         backGroundColor = vintelCache.getConfigValue("background_color")
@@ -130,10 +153,13 @@ class Application(QApplication):
         consoleHandler.setFormatter(formatter)
         rootLogger.addHandler(consoleHandler)
 
+        logging.critical("Logging set to %s." % logging.getLevelName(logLevel))
+
         logging.critical("")
         logging.critical("------------------- Vintel %s starting up -------------------", version.VERSION)
         logging.critical("")
         logging.critical("QT version %s", QT_VERSION_STR)
+        logging.critical("Python version %s", sys.version)
         logging.debug("Looking for chat logs at: %s", chatLogDirectory)
         logging.debug("Cache maintained here: %s", cache.Cache.PATH_TO_CACHE)
         logging.debug("Writing logs to: %s", vintelLogDirectory)
@@ -144,7 +170,7 @@ class Application(QApplication):
 
         trayIcon = systemtray.TrayIcon(self)
         trayIcon.show()
-        self.mainWindow = viui.MainWindow(chatLogDirectory, trayIcon, backGroundColor)
+        self.mainWindow = viui.MainWindow(chatLogDirectory, trayIcon, backGroundColor, oneTimeOptions)
         self.mainWindow.show()
         splash.finish(self.mainWindow)
 

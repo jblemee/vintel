@@ -23,7 +23,7 @@ import six
 import logging
 
 from PyQt5.QtCore import QThread, QUrl
-from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QSoundEffect
 from six.moves.queue import Queue
 from vi.resources import resourcePath
 from vi.singleton import Singleton
@@ -36,59 +36,100 @@ try:
 except:
     festivalAvailable = False
 
-class SoundManager(six.with_metaclass(Singleton)):
-    SOUNDS = {"alarm": "178032__zimbot__redalert-klaxon-sttos-recreated.wav",
-              "kos": "178031__zimbot__transporterstartbeep0-sttos-recreated.wav",
-              "request": "178028__zimbot__bosun-whistle-sttos-recreated.wav"}
+try:
+    import pyttsx
+    pyttsxAvailable = True
+except:
+    pyttsxAvailable = False
 
-    soundVolume = 25  # Must be an integer between 0 and 100
+
+class SoundManager(six.with_metaclass(Singleton)):
+
+    @staticmethod
+    def ALARM(): return "alarm"
+
+    @staticmethod
+    def KOS(): return "kos"
+
+    @staticmethod
+    def REQUEST(): return "request"
+
+    SOUNDS = {
+        ALARM.__func__(): "178032__zimbot__redalert-klaxon-sttos-recreated.wav",
+        KOS.__func__():  "178031__zimbot__transporterstartbeep0-sttos-recreated.wav",
+        REQUEST.__func__(): "178028__zimbot__bosun-whistle-sttos-recreated.wav"
+    }
+
+    DISABLED = False
+
     soundActive = False
     soundAvailable = False
-    useDarwinSound = False
-    useSpokenNotifications = True
+    useSpokenNotifications = False
     _soundThread = None
+    volume = 25      # Must be an integer between 0 and 100
+
+    isDarwin = sys.platform.startswith("darwin")
 
     def __init__(self):
-        self._soundThread = self.SoundThread()
         self.soundAvailable = self.platformSupportsAudio()
+        if not self.soundAvailable:
+            return
+        self._soundThread = self.SoundThread(self, self.SOUNDS)
         if not self.platformSupportsSpeech():
-            self.useSpokenNotifications = False
+            self.setUseSpokenNotifications(False)
         if self.soundAvailable:
             self._soundThread.start()
 
     def platformSupportsAudio(self):
-        return True
+        return not SoundManager.DISABLED
 
     def platformSupportsSpeech(self):
-        if self._soundThread.isDarwin or festivalAvailable:
-            return True
-        return False
+        return self.isDarwin or festivalAvailable or pyttsxAvailable
 
     def setUseSpokenNotifications(self, newValue):
-        if newValue is not None:
+        if self.platformSupportsSpeech():
             self.useSpokenNotifications = newValue
+        else:
+            logging.critical("Cannot enable speech on a platform that does not support it.")
+
+    def enable(self):
+        self.soundActive = True
+
+    def disable(self):
+        self.soundActive = False
 
     def setSoundVolume(self, newValue):
         """ Accepts and stores a number between 0 and 100.
         """
-        self.soundVolume = max(0, min(100, newValue))
-        self._soundThread.setVolume(self.soundVolume)
+        if newValue > 100:
+            newValue = 100
+        elif newValue < 0:
+            newValue = 0
+        self.volume = newValue
+        if self._soundThread:
+            self._soundThread.updateVolume()
+
+    def getSoundVolume(self):
+        return self.volume
 
     def playSound(self, name="alarm", message="", abbreviatedMessage=""):
         """ Schedules the work, which is picked up by SoundThread.run()
         """
         if self.soundAvailable and self.soundActive:
-            if self.useSpokenNotifications:
-                audioFile = None
-            else:
-                audioFile = resourcePath("vi/ui/res/{0}".format(self.SOUNDS[name]))
-            self._soundThread.queue.put((audioFile, message, abbreviatedMessage))
+            logging.debug("Queing sound: \"%s\" \"%s\" \"%s\"" % (name, message, abbreviatedMessage))
+            self._soundThread.queue.put((name, message, abbreviatedMessage))
+        else:
+            logging.error("Sound not %s, ignoring play request: \"%s\" \"%s\" \"%s\""
+                % ("active" if self.soundAvailable else "available", name, message, abbreviatedMessage))
 
     def say(self,  message='This is a test!'):
-        self._soundThread.speak(message)
+        """ Schedules the work, which is picked up by SoundThread.run()
+        """
+        if self.soundAvailable and self.soundActive:
+            self._soundThread.queue.put((None, message, None))
 
     def quit(self):
-        if self.soundAvailable:
+        if self._soundThread:
             self._soundThread.quit()
 
     #
@@ -97,35 +138,60 @@ class SoundManager(six.with_metaclass(Singleton)):
 
     class SoundThread(QThread):
         queue = None
-        isDarwin = sys.platform.startswith("darwin")
-        volume = 25
+        effects = {}
+        parent = None
+        pyttxsxEngine = None
 
-
-        def __init__(self):
+        def __init__(self, parent, predefined):
             QThread.__init__(self)
+            self.parent = parent
+            if not parent.soundAvailable:
+                logging.critical('NO SOUND ENGINE.')
+                return
             self.queue = Queue()
-            self.player = QMediaPlayer()
+            self.player = QMediaPlayer(None, QMediaPlayer.LowLatency)
             self.active = True
+            if pyttsxAvailable and not festivalAvailable:
+                self.pyttxsxEngine = pyttsx.init()
+                # On stock windows 10 see TTS_MS_EN-US_DAVID_11.0 and female TTS_MS_EN-US_ZIRA_11.0, if no win10 Zira use default
+                if 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_ZIRA_11.0' in self.pyttxsxEngine.getProperty('voices'):
+                    self.pyttxsxEngine.setProperty('voice', 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_ZIRA_11.0')
+            for key in predefined:
+                self.effects[key] = QSoundEffect()
+                self.effects[key].setSource(QUrl.fromLocalFile(resourcePath("vi/ui/res/{0}".format(predefined[key]))))
+            self.updateVolume()
 
 
-        def setVolume(self, volume):
-            self.volume = volume
+        def updateVolume(self):
+            effectsVolume = float(self.parent.getSoundVolume())/100
+            for key in self.effects:
+                self.effects[key].setVolume(effectsVolume)
+            if self.pyttxsxEngine:
+                self.pyttxsxEngine.setProperty('volume', effectsVolume)
 
 
         def run(self):
             while True:
-                audioFile, message, abbreviatedMessage = self.queue.get()
+                name, message, abbreviatedMessage = self.queue.get()
                 if not self.active:
                     return
-                if SoundManager().useSpokenNotifications and (message != "" or abbreviatedMessage != ""):
-                    if abbreviatedMessage != "":
+                if self.parent.useSpokenNotifications and (message or abbreviatedMessage):
+                    if abbreviatedMessage:
                         message = abbreviatedMessage
                     if not self.speak(message):
-                        if audioFile:
-                            self.playAudioFile(audioFile, False)
+                        self.play(name)
                         logging.error("SoundThread: sorry, speech not yet implemented on this platform")
-                elif audioFile is not None:
-                    self.playAudioFile(audioFile, False)
+                else:
+                    self.play(name)
+
+
+        def play(self, name):
+            if name in self.effects:
+                logging.debug("Playing sound: %s" % name)
+                self.effects[name].play()
+            else:
+                logging.error("SoundThread: NO SOUND PLAYED, unknown sound \"%s\"" % name)
+
 
         def quit(self):
             self.active = False
@@ -137,10 +203,13 @@ class SoundManager(six.with_metaclass(Singleton)):
 
 
         def speak(self, message):
-            if self.isDarwin:
+            logging.critical("speaking: %s" % message)
+            if self.parent.isDarwin:
                 self.darwinSpeak(message)
             elif festivalAvailable:
                 festival.sayText(message)
+            elif pyttsxAvailable:
+                self.pyttsxSpeak(message)
             else:
                 return False
             return True
@@ -150,18 +219,18 @@ class SoundManager(six.with_metaclass(Singleton)):
         #  Audio subsytem access
         #
 
-        def playAudioFile(self, filename, stream=False):
-            try:
-                content = QMediaContent(QUrl.fromLocalFile(filename))
-                self.player.setMedia(content)
-                self.player.setVolume(float(self.volume))
-                self.player.play()
-            except Exception as e:
-                logging.error("SoundThread.playAudioFile exception: %s", e)
-
-
         def darwinSpeak(self, message):
+            logging.debug("Speaking with darwin: %s" % message)
             try:
-                os.system("say [[volm {0}]] '{1}'".format(float(self.volume) / 100.0, message))
+                os.system("say [[volm {0}]] '{1}'".format(float(self.parent.getSoundVolume()) / 100.0, message))
+            except Exception as e:
+                logging.error("SoundThread.darwinSpeak exception: %s", e)
+
+
+        def pyttsxSpeak(self, message):
+            logging.debug("Speaking with pyttsx: %s" % message)
+            try:
+                self.pyttxsxEngine.say(message)
+                self.pyttxsxEngine.runAndWait()
             except Exception as e:
                 logging.error("SoundThread.darwinSpeak exception: %s", e)

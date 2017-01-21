@@ -60,10 +60,12 @@ class MainWindow(QtWidgets.QMainWindow):
     avatarLoaded = pyqtSignal(str, object)
     oldStyleWebKit = OLD_STYLE_WEBKIT
 
-    def __init__(self, pathToLogs, trayIcon, backGroundColor):
+    def __init__(self, pathToLogs, trayIcon, backGroundColor, oneTimeOptions):
 
         QtWidgets.QMainWindow.__init__(self)
         self.cache = Cache()
+
+        self.cache.dumpConfig()
 
         if backGroundColor:
             self.setStyleSheet("QWidget { background-color: %s; }" % backGroundColor)
@@ -114,7 +116,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.roomnames = roomnames
 
         # Disable the sound UI if sound is not available
-        if not SoundManager().soundAvailable:
+        if 'NO_SOUND' in oneTimeOptions and oneTimeOptions['NO_SOUND']:
+            SoundManager.DISABLED = True
+            self.changeSound(disable=True)
+        elif not SoundManager().soundAvailable:
             self.changeSound(disable=True)
         else:
             self.changeSound()
@@ -148,7 +153,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.updateRegionMenu()
         self.updateOtherRegionMenu()
         self.setupMap(True)
-        self.replayLogs()
+        if 'NO_REPLAY' in oneTimeOptions and oneTimeOptions['NO_REPLAY']:
+            logging.critical('Skipping log replay.')
+        else:
+            self.replayLogs()
 
 
     def paintEvent(self, event):
@@ -440,7 +448,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     (None, "changeSound", self.activateSoundAction.isChecked()),
                     (None, "changeChatVisibility", self.showChatAction.isChecked()),
                     (None, "loadInitialMapPositions", self.mapPositionsDict),
-                    (None, "setSoundVolume", SoundManager().soundVolume),
+                    (None, "setSoundVolume", SoundManager().getSoundVolume()),
                     (None, "changeFrameless", self.framelessWindowAction.isChecked()),
                     (None, "changeUseSpokenNotifications", self.useSpokenNotificationsAction.isChecked()),
                     (None, "changeKosCheckClipboard", self.kosClipboardActiveAction.isChecked()),
@@ -540,12 +548,15 @@ class MainWindow(QtWidgets.QMainWindow):
             self.activateSoundAction.setEnabled(False)
             self.soundSetupAction.setEnabled(False)
             #self.soundButton.setEnabled(False)
-            QMessageBox.warning(None, "Sound disabled", "Please chekc the log files. This warning will not be shown again.", QMessageBox.Ok)
+            QMessageBox.warning(None, "Sound disabled", "Please check the log files. This warning will not be shown again.", QMessageBox.Ok)
         else:
             if newValue is None:
                 newValue = self.activateSoundAction.isChecked()
             self.activateSoundAction.setChecked(newValue)
-            SoundManager().soundActive = newValue
+            if newValue:
+                SoundManager().enable()
+            else:
+                SoundManager().disable()
 
     def changeAlwaysOnTop(self, newValue=None):
         if newValue is None:
@@ -864,7 +875,7 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         try:
             if hasKos:
-                SoundManager().playSound("kos", text)
+                SoundManager().playSound(SoundManager.KOS(), text)
             if state == "ok":
                 if requestType == "xxx":  # An xxx request out of the chat
                     self.trayIcon.showMessage("Player KOS-Check", text, 1)
@@ -899,7 +910,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def showSoundSetup(self):
         dialog = QDialog(self)
         uic.loadUi(resourcePath("vi/ui/SoundSetup.ui"), dialog)
-        dialog.volumeSlider.setValue(SoundManager().soundVolume)
+        dialog.volumeSlider.setValue(SoundManager().getSoundVolume())
         dialog.volumeSlider.valueChanged.connect(SoundManager().setSoundVolume)
         dialog.testSoundButton.clicked.connect(lambda: SoundManager().playSound())
         dialog.testVoiceButton.clicked.connect(lambda: SoundManager().say('Test... 1, 2, 3.'))
