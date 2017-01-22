@@ -58,6 +58,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     chatMessageAdded = pyqtSignal(object)
     avatarLoaded = pyqtSignal(str, object)
+    replayLogsRequested = pyqtSignal()
     oldStyleWebKit = OLD_STYLE_WEBKIT
 
     def __init__(self, pathToLogs, trayIcon, backGroundColor, oneTimeOptions):
@@ -94,6 +95,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.mapPositionsDict = {}
         self.chatparser = None
         self.systemsWithRegions = systems.buildUpperKeyedAliases()
+        self.locations = {}
 
         self.chatbox.setTitle("All Intel (past {0} minues)".format(str(MESSAGE_EXPIRY_SECS/60)))
 
@@ -153,11 +155,21 @@ class MainWindow(QtWidgets.QMainWindow):
         self.updateRegionMenu()
         self.updateOtherRegionMenu()
         self.setupMap(True)
+        self.replayLogsRequested.connect(self.replayLogs)
         if 'NO_REPLAY' in oneTimeOptions and oneTimeOptions['NO_REPLAY']:
             logging.critical('Skipping log replay.')
         else:
-            self.replayLogs()
+            # Keep a handle to the thread or it will be cleaned up early
+            self.replayThread = self.ReplayLogsThread(self)
+            self.replayThread.start()
 
+    class ReplayLogsThread(QtCore.QThread):
+        def __init__(self, parent):
+            QtCore.QThread.__init__(self)
+            self.parent = parent
+        def run(self):
+            self.parent.replayLogsRequested.emit()
+            return
 
     def paintEvent(self, event):
         opt = QStyleOption()
@@ -324,6 +336,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setJumpbridges(self.cache.getConfigValue("jumpbridge_url"))
 
         self.systems = self.dotlan.systems
+
+        for char in self.locations:
+            if self.locations[char] in self.systems:
+                self.systems[self.locations[char]].addLocatedCharacter(char)
 
         logging.critical("Creating chat parser")
         oldParser = self.chatparser
@@ -687,9 +703,11 @@ class MainWindow(QtWidgets.QMainWindow):
     def setLocation(self, char, newSystem):
         for system in self.systems.values():
             system.removeLocatedCharacter(char)
-        if not newSystem == "?" and newSystem in self.systems:
-            self.systems[newSystem].addLocatedCharacter(char)
-            self.updateMapView()
+        if not newSystem == "?":
+            if newSystem in self.systems:
+                self.systems[newSystem].addLocatedCharacter(char)
+                self.updateMapView()
+            self.locations[char] = newSystem
 
     def getMapScrollPosition(self):
         if OLD_STYLE_WEBKIT:
@@ -823,14 +841,16 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def replayLogs(self):
         """On startup, replay info from logfiles"""
+        logging.critical("LOG REPLAY: starting")
         messages = []
         for path in self.chatparser.rewind():
             messages.extend(self.chatparser.fileModified(path))
         messages.sort(key=lambda x: x.timestamp)
+        logging.debug("LOG REPLAY: read logs.")
         # we use these parsed messages to replay events on region switch, reset them to a time ordered list
         self.chatparser.knownMessages = messages
         self.processLogMessages(messages)
-        logging.critical("Done with replay")
+        logging.critical("LOG REPLAY: complete")
 
     def addMessageToIntelChat(self, message):
         scrollToBottom = False
@@ -990,7 +1010,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.addMessageToIntelChat(message)
                 # For each system that was mentioned in the message, check for alarm distance to the current system
                 # and alarm if within alarm distance.
-                systemList = self.dotlan.systems
                 if message.systems:
                     for systemname in message.systems:
                         if not systemname in self.systems:
@@ -998,13 +1017,14 @@ class MainWindow(QtWidgets.QMainWindow):
                             continue
                         system = self.systems[systemname]
                         system.setStatus(message.status, message.timestamp)
-                        if message.status in (states.REQUEST, states.ALARM) and message.user not in self.knownPlayerNames:
-                            alarmDistance = self.alarmDistance if message.status == states.ALARM else 0
-                            for nSystem, data in system.getNeighbours(alarmDistance).items():
-                                distance = data["distance"]
-                                chars = nSystem.getLocatedCharacters()
-                                if len(chars) > 0 and message.user not in chars:
-                                    self.trayIcon.showNotification(message, system.name, ", ".join(chars), distance)
+                        if (evegate.currentEveTime() - message.timestamp).total_seconds() < system.ALARM_COLORS[0][0]:
+                            if message.status in (states.REQUEST, states.ALARM) and message.user not in self.knownPlayerNames:
+                                alarmDistance = self.alarmDistance if message.status == states.ALARM else 0
+                                for nSystem, data in system.getNeighbours(alarmDistance).items():
+                                    distance = data["distance"]
+                                    chars = nSystem.getLocatedCharacters()
+                                    if len(chars) > 0 and message.user not in chars:
+                                        self.trayIcon.showNotification(message, system.name, ", ".join(chars), distance)
                         system.messages.append(message)
 
         # call once after all messages are processed

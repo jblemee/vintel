@@ -323,6 +323,7 @@ class System(object):
     CLEAR_COLOR = "#59FF6C"
     ALARM_COLORS = [
         # Alarmed systems change colors based on how long ago the alarm was received
+        # Most severe / shorter times must come first.
         # maxDiff (seconds), system background color, timer text color
         (60 * 4, "#FF0000", "#FFFFFF"),
         (60 * 10, "#FF9B0F", "#FFFFFF"),
