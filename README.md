@@ -79,11 +79,11 @@ https://pypi.python.org/pypi/requests
 The anaconda python package will come with most of what you need [download](https://www.continuum.io/downloads#windows).
 vintel compilation has been tested with 64 bit anaconda2 v4.2.0 for python 2.7 on windows 10.
 
-You will need to run this command to install the pyglet package.  If you installed anaconda for all
+To enable text to speech, you will need to run this command to install the pyttsx package.  If you installed anaconda for all
 users, you may need to run them in an *admin* anaconda prompt.
 
 ```
-pip install pyglet
+conda install -c primer pyttsx=1.1
 ```
 
 ## Note for cygwin users
