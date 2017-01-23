@@ -79,7 +79,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.pathToLogs = pathToLogs
         self.mapTimer = QtCore.QTimer(self)
-        self.mapTimer.timeout.connect(self.updateMapView)
+        self.mapTimer.timeout.connect(self.scheduledUpdateMapView)
         self.clipboardTimer = QtCore.QTimer(self)
         self.oldClipboardContent = ""
         self.trayIcon = trayIcon
@@ -700,13 +700,14 @@ class MainWindow(QtWidgets.QMainWindow):
             logging.warn('System [%s] is unknown.', n)
 
 
-    def setLocation(self, char, newSystem):
+    def setLocation(self, char, newSystem, isReplay=False):
         for system in self.systems.values():
             system.removeLocatedCharacter(char)
         if not newSystem == "?":
             if newSystem in self.systems:
                 self.systems[newSystem].addLocatedCharacter(char)
-                self.updateMapView()
+                if not isReplay:
+                    self.updateMapView()
             self.locations[char] = newSystem
 
     def getMapScrollPosition(self):
@@ -842,14 +843,20 @@ class MainWindow(QtWidgets.QMainWindow):
     def replayLogs(self):
         """On startup, replay info from logfiles"""
         logging.critical("LOG REPLAY: starting")
-        messages = []
-        for path in self.chatparser.rewind():
-            messages.extend(self.chatparser.fileModified(path))
-        messages.sort(key=lambda x: x.timestamp)
-        logging.debug("LOG REPLAY: read logs.")
-        # we use these parsed messages to replay events on region switch, reset them to a time ordered list
-        self.chatparser.knownMessages = messages
-        self.processLogMessages(messages)
+        try:
+            self.filewatcherThread.paused = True
+            self.mapTimer.stop()
+            messages = []
+            for path in self.chatparser.rewind():
+                messages.extend(self.chatparser.fileModified(path))
+            messages.sort(key=lambda x: x.timestamp)
+            logging.debug("LOG REPLAY: read logs.")
+            # we use these parsed messages to replay events on region switch, reset them to a time ordered list
+            self.chatparser.knownMessages = messages
+            self.processLogMessages(messages, True)
+        finally:
+            self.filewatcherThread.paused = False
+            self.mapTimer.start(MAP_UPDATE_INTERVAL_MSECS)
         logging.critical("LOG REPLAY: complete")
 
     def addMessageToIntelChat(self, message):
@@ -968,10 +975,15 @@ class MainWindow(QtWidgets.QMainWindow):
             logging.error("updateStatisticsOnMap, error: %s" % text)
 
 
+    def scheduledUpdateMapView(self):
+        logging.debug("Updating map due to timer event.")
+        self.updateMapView()
+
+
     def updateMapView(self):
-        logging.debug("Updating map start")
+        logging.debug("Updating map: start")
         self.setMapContent(self.dotlan.svg)
-        logging.debug("Updating map complete")
+        logging.debug("Updating map: complete")
 
 
     def zoomMapIn(self):
@@ -984,9 +996,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def logFileChanged(self, path):
         messages = self.chatparser.fileModified(path)
-        self.processLogMessages(messages)
+        if messages:
+            self.processLogMessages(messages)
 
-    def processLogMessages(self, messages):
+    def processLogMessages(self, messages, isReplay=False):
         for message in messages:
 
             # This function is a resource pig, give others a chance to run while we process messages
@@ -995,7 +1008,7 @@ class MainWindow(QtWidgets.QMainWindow):
             # If players location has changed
             if message.status == states.LOCATION:
                 self.knownPlayerNames.add(message.user)
-                self.setLocation(message.user, message.systems[0])
+                self.setLocation(message.user, message.systems[0], isReplay)
             elif message.status == states.KOS_STATUS_REQUEST:
                 # Do not accept KOS requests from any but monitored intel channels
                 # as we don't want to encourage the use of xxx in those channels.

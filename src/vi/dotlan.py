@@ -50,6 +50,7 @@ class Map(object):
 
     @property
     def svg(self):
+        logging.debug('Call to svg property render.')
         # Re-render all systems
         for system in self.systems.values():
             system.update()
@@ -402,6 +403,8 @@ class System(object):
     def setBackgroundColor(self, color):
         for rect in self.svgElement("rect"):
             if "location" not in rect.get("class", []) and "marked" not in rect.get("class", []):
+                if logging.getLogger().isEnabledFor(logging.DEBUG):
+                    logging.debug('System[%s] bg color = %s' % (self.name, color))
                 rect["style"] = "fill: {0};".format(color)
 
     def getLocatedCharacters(self):
@@ -463,6 +466,8 @@ class System(object):
     def setStatus(self, newStatus, statusTime = None):
         if None == statusTime:
             statusTime = evegate.currentEveTime()
+        if logging.getLogger().isEnabledFor(logging.DEBUG):
+            logging.debug('System[%s] set status %s at %s.  Status was %s.', self.name, str(newStatus), str(statusTime), str(self.status))
         if newStatus == states.ALARM:
             self.lastAlarmTime = statusTime
             if "stopwatch" not in self.secondLine["class"]:
@@ -504,6 +509,8 @@ class System(object):
 
     def update(self):
         # state changed?
+        if logging.getLogger().isEnabledFor(logging.DEBUG):
+            logging.debug('System[%s] update %s at %s.', self.name, str(self.status), str(self.lastAlarmTime))
         if (self.status == states.ALARM):
             alarmTime = (evegate.currentEveTime() - self.lastAlarmTime).total_seconds()
             for maxDiff, alarmColor, secondLineColor in self.ALARM_COLORS:

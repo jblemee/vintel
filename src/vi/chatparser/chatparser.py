@@ -139,6 +139,7 @@ class ChatParser(object):
         # May happen if someone plays > 1 account
         if message in self.knownMessages:
             message.status = states.IGNORE
+            logging.debug("Ignoring duplicate message: %s" % str(message))
             return message
 
         while parseShips(rtext):
@@ -241,6 +242,7 @@ class ChatParser(object):
     def expire(self):
         for m in self.knownMessages:
             if (evegate.currentEveTime() - m.timestamp).total_seconds() > self.messageExpirySecs:
+                self.isOld = True
                 self.knownMessages.pop(0)
             else:
                 break
@@ -267,3 +269,7 @@ class Message(object):
 
     def __hash__(self):
         return hash(self.__key())
+
+    def __repr__(self):
+        return ('Message(room:%s user:%s timestamp:%s status:%s plainText:[%s])'
+            % (self.room, self.user, str(self.timestamp), str(self.status), self.plainText))
