@@ -38,6 +38,8 @@ JB_COLORS = ("800000", "808000", "BC8F8F", "ff00ff", "c83737", "FF6347", "917c6f
              "88aa00" "FFE4E1", "008080", "00BFFF", "4682B4", "00FF7F", "7FFF00", "ff6600",
              "CD5C5C", "FFD700", "66CDAA", "AFEEEE", "5F9EA0", "FFDEAD", "696969", "2F4F4F")
 
+dotlanClockAdjustSeconds = int(0)
+
 class DotlanException(Exception):
     def __init__(self, *args, **kwargs):
         Exception.__init__(self, *args, **kwargs)
@@ -523,9 +525,19 @@ class System(object):
                         self.secondLine["style"] = "fill: {0};".format(secondLineColor)
                     break
         if self.status in (states.ALARM, states.WAS_ALARMED, states.CLEAR):  # timer
-            diff = (evegate.currentEveTime() - self.lastAlarmTime).total_seconds()
-            minutes = int(math.floor(diff / 60))
-            seconds = int(diff - minutes * 60)
+            diff = int((evegate.currentEveTime() - self.lastAlarmTime).total_seconds())
+            # There are some weird formatting errors if the clock is a little off: -1s => 1min 59s.
+            if diff < 0:
+                global dotlanClockAdjustSeconds
+                if diff + dotlanClockAdjustSeconds < 0:
+                    dotlanClockAdjustSeconds = 1 - diff  # include a 1s buffer
+                    if dotlanClockAdjustSeconds > 2:
+                        logging.warning('Clock is off, adjusting by %d seconds' % dotlanClockAdjustSeconds)
+                diff = diff + dotlanClockAdjustSeconds
+            minutes = diff / 60
+            seconds = diff % 60
+            if self.name == 'TXME-A':
+                logging.critical('S = %d M = %d S = %d | %s | %s' % (int(diff), minutes, seconds, self.lastAlarmTime, evegate.currentEveTime()))
             string = "{m:02d}:{s:02d}".format(m=minutes, s=seconds)
             if self.status == states.CLEAR:
                 secondsUntilWhite = 10 * 60
