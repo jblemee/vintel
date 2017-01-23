@@ -473,6 +473,7 @@ class System(object):
             for maxDiff, alarmColor, secondLineColor in self.ALARM_COLORS:
                 if delta < maxDiff:
                     self.setBackgroundColor(alarmColor)
+                    break
         elif newStatus == states.CLEAR:
             self.lastAlarmTime = statusTime
             self.setBackgroundColor(self.CLEAR_COLOR)
