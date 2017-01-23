@@ -536,8 +536,6 @@ class System(object):
                 diff = diff + dotlanClockAdjustSeconds
             minutes = diff / 60
             seconds = diff % 60
-            if self.name == 'TXME-A':
-                logging.critical('S = %d M = %d S = %d | %s | %s' % (int(diff), minutes, seconds, self.lastAlarmTime, evegate.currentEveTime()))
             string = "{m:02d}:{s:02d}".format(m=minutes, s=seconds)
             if self.status == states.CLEAR:
                 secondsUntilWhite = 10 * 60
