@@ -32,7 +32,7 @@ else:
     def to_blob(x):
         return x
     def from_blob(x):
-        return x
+        return x[0][0]
 from vi.cache.dbstructure import updateDatabase
 
 
