@@ -807,18 +807,28 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def setJumpbridges(self, url):
 
-        if url is None:
-            url = ""
+        # TODO: better handle blank, it is valid and doesn't need to go to s3
+        if not url:
+            cacheKey = "jb_" + self.dotlan.region.lower()
+            url = amazon_s3.getJumpbridgeUrl(self.dotlan.region.lower())
+        else:
+            # embed url in key so we update cache when url changes
+            cacheKey = "jb_" + url
+
         try:
-            data = []
-            if url != "":
-                resp = requests.get(url)
-                for line in resp.iter_lines(decode_unicode=True):
-                    parts = line.strip().split()
-                    if len(parts) == 3:
-                        data.append(parts)
+            cache = Cache()
+            data = cache.getFromCache(cacheKey)
+            if data:
+                data = json.loads(data)
             else:
-                data = amazon_s3.getJumpbridgeData(self.dotlan.region.lower())
+                data = []
+                resp = requests.get(url)
+                if resp.status_code == requests.codes.ok:
+                    for line in resp.iter_lines(decode_unicode=True):
+                        parts = line.strip().split()
+                        if len(parts) == 3:
+                            data.append(parts)
+                cache.putIntoCache(cacheKey, json.dumps(data), 60 * 60 * 12)
             self.dotlan.setJumpbridges(data)
             self.cache.saveConfigValue("jumpbridge_url", url)
         except Exception as e:

@@ -17,37 +17,16 @@
 #  along with this program.	 If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-import json
 import requests
 import logging
 
 from PyQt5.QtCore import pyqtSignal, QThread
 from distutils.version import StrictVersion
 from vi import version
-from vi.cache.cache import Cache
 
 
-def getJumpbridgeData(region):
-    try:
-        cacheKey = "jb_" + region
-        cache = Cache()
-        data = cache.getFromCache(cacheKey)
-
-        if data:
-            data = json.loads(data)
-        else:
-            data = []
-            url = "https://s3.amazonaws.com/vintel-resources/{region}_jb.txt"
-            resp = requests.get(url.format(region=region))
-            for line in resp.iter_lines(decode_unicode=True):
-                splits = line.strip().split()
-                if len(splits) == 3:
-                    data.append(splits)
-            cache.putIntoCache(cacheKey, json.dumps(data), 60 * 60 * 12)
-        return data
-    except Exception as e:
-        logging.error("Getting Jumpbridgedata failed with: %s", e)
-        return []
+def getJumpbridgeUrl(region):
+    return "https://s3.amazonaws.com/vintel-resources/{region}_jb.txt".format(region=region)
 
 
 def getNewestVersion():
