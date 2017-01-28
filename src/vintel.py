@@ -80,12 +80,13 @@ class Application(QApplication):
             elif '--warn' == v:
                 logLevel = logging.WARN
             elif '--nosound' == v:
-                nothing = 1
                 oneTimeOptions['NO_SOUND'] = True
             elif '--noreplay' == v:
                 oneTimeOptions['NO_REPLAY'] = True
-            elif '--clear' == c:
+            elif '--clear' == v:
                 oneTimeOptions['CLEAR_CACHE'] = True
+            elif '--nosplash' == v:
+                oneTimeOptions['NO_SPLASH'] = True
             else:
                 chatLogDirectory = v
 
@@ -136,7 +137,8 @@ class Application(QApplication):
         if backGroundColor:
             self.setStyleSheet("QWidget { background-color: %s; }" % backGroundColor)
 
-        splash.show()
+        if not 'NO_SPLASH' in oneTimeOptions:
+            splash.show()
         self.processEvents()
 
         # Setup logging for console and rotated log files
