@@ -105,8 +105,11 @@ class MainWindow(QtWidgets.QMainWindow):
             self.knownPlayerNames = set(self.knownPlayerNames.split(","))
         else:
             self.knownPlayerNames = set()
-            diagText = "Vintel scans EVE system logs and remembers your characters as they change systems.\n\nSome features (clipboard KOS checking, alarms, etc.) may not work until your character(s) have been registered. Change systems, with each character you want to monitor, while Vintel is running to remedy this."
-            QMessageBox.warning(None, "Known Characters not Found", diagText, QMessageBox.Ok)
+            # Use non-modal, it gets stuck under the splash screen sometimes
+            msgBox = QMessageBox(self)
+            msgBox.setText("Known Characters not Found")
+            msgBox.setInformativeText("Vintel scans EVE system logs and remembers your characters as they change systems.\n\nSome features (clipboard KOS checking, alarms, etc.) may not work until your character(s) have been registered. Change systems, with each character you want to monitor, while Vintel is running to remedy this.")
+            msgBox.show()
 
         # Set up user's intel rooms
         roomnames = self.cache.getConfigValue("channel_names")
