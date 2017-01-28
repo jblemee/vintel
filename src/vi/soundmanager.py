@@ -21,9 +21,10 @@ import os
 import sys
 import six
 import logging
+import time
 
-from PyQt5.QtCore import QThread, QUrl
-from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QSoundEffect
+from PyQt5.QtCore import QThread, QUrl, QEventLoop
+from PyQt5.QtMultimedia import QSoundEffect
 from six.moves.queue import Queue
 from vi.resources import resourcePath
 from vi.singleton import Singleton
@@ -141,37 +142,39 @@ class SoundManager(six.with_metaclass(Singleton)):
         effects = {}
         parent = None
         pyttxsxEngine = None
+        predefined = None
+        playingEffect = None
 
         def __init__(self, parent, predefined):
             QThread.__init__(self)
             self.parent = parent
+            self.predefined = predefined
             if not parent.soundAvailable:
                 logging.critical('NO SOUND ENGINE.')
                 return
             self.queue = Queue()
-            self.player = QMediaPlayer(None, QMediaPlayer.LowLatency)
             self.active = True
+
+        def run(self):
+            # Initialize anything with timers in the "same thread".  __init__() runs in parent's thread
             if pyttsxAvailable and not festivalAvailable:
                 self.pyttxsxEngine = pyttsx.init()
                 # On stock windows 10 see TTS_MS_EN-US_DAVID_11.0 and female TTS_MS_EN-US_ZIRA_11.0, if no win10 Zira use default
                 if 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_ZIRA_11.0' in self.pyttxsxEngine.getProperty('voices'):
                     self.pyttxsxEngine.setProperty('voice', 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_ZIRA_11.0')
-            for key in predefined:
+            for key in self.predefined:
                 self.effects[key] = QSoundEffect()
-                self.effects[key].setSource(QUrl.fromLocalFile(resourcePath("vi/ui/res/{0}".format(predefined[key]))))
+                self.effects[key].setSource(QUrl.fromLocalFile(resourcePath("vi/ui/res/{0}".format(self.predefined[key]))))
             self.updateVolume()
 
-
-        def updateVolume(self):
-            effectsVolume = float(self.parent.getSoundVolume())/100
-            for key in self.effects:
-                self.effects[key].setVolume(effectsVolume)
-            if self.pyttxsxEngine:
-                self.pyttxsxEngine.setProperty('volume', effectsVolume)
-
-
-        def run(self):
             while True:
+                # Need to process events in this thread's event loop while effects are playing
+                if self.playingEffect and self.playingEffect.isPlaying():
+                    QEventLoop().processEvents(QEventLoop.AllEvents)
+                    continue
+                else:
+                    self.playingEffect = None
+                # Now it's ok to block and wait for an event, we finished playing previous sound
                 name, message, abbreviatedMessage = self.queue.get()
                 if not self.active:
                     return
@@ -185,10 +188,19 @@ class SoundManager(six.with_metaclass(Singleton)):
                     self.play(name)
 
 
+        def updateVolume(self):
+            effectsVolume = float(self.parent.getSoundVolume())/100
+            for key in self.effects:
+                self.effects[key].setVolume(effectsVolume)
+            if self.pyttxsxEngine:
+                self.pyttxsxEngine.setProperty('volume', effectsVolume)
+
+
         def play(self, name):
             if name in self.effects:
                 logging.debug("Playing sound: %s" % name)
                 self.effects[name].play()
+                self.playingEffect = self.effects[name]
             else:
                 logging.error("SoundThread: NO SOUND PLAYED, unknown sound \"%s\"" % name)
 
@@ -196,9 +208,6 @@ class SoundManager(six.with_metaclass(Singleton)):
         def quit(self):
             self.active = False
             self.queue.put((None, None, None))
-            if self.player:
-                self.player.pause()
-                self.player.delete()
             QThread.quit(self)
 
 
