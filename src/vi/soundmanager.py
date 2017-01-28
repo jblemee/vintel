@@ -156,10 +156,6 @@ class SoundManager(six.with_metaclass(Singleton)):
                 logging.critical('NO SOUND ENGINE.')
                 return
             self.queue = Queue()
-            self.active = True
-
-        def run(self):
-            # Initialize anything with timers in the "same thread".  __init__() runs in parent's thread
             if pyttsxAvailable and not festivalAvailable:
                 self.pyttxsxEngine = pyttsx.init()
                 for voice in self.pyttxsxEngine.getProperty('voices'):
@@ -172,7 +168,11 @@ class SoundManager(six.with_metaclass(Singleton)):
                         self.pyttxsxEngine.setProperty('voice', voice.id)
                         break
                     else:
-                        logging.info('available voice ' + voice.name)
+                        logging.info('available voice ' + voice.name)            
+            self.active = True
+
+        def run(self):
+            # Initialize anything with timers in the "same thread".  __init__() runs in parent's thread
             for key in self.predefined:
                 self.effects[key] = QSoundEffect()
                 self.effects[key].setSource(QUrl.fromLocalFile(resourcePath("vi/ui/res/{0}".format(self.predefined[key]))))
