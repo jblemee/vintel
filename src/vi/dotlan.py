@@ -405,8 +405,8 @@ class System(object):
     def setBackgroundColor(self, color):
         for rect in self.svgElement("rect"):
             if "location" not in rect.get("class", []) and "marked" not in rect.get("class", []):
-                if logging.getLogger().isEnabledFor(logging.DEBUG):
-                    logging.debug('System[%s] bg color = %s' % (self.name, color))
+                #if logging.getLogger().isEnabledFor(logging.DEBUG):
+                #    logging.debug('System[%s] bg color = %s' % (self.name, color))
                 rect["style"] = "fill: {0};".format(color)
 
     def getLocatedCharacters(self):
@@ -511,8 +511,8 @@ class System(object):
 
     def update(self):
         # state changed?
-        if logging.getLogger().isEnabledFor(logging.DEBUG):
-            logging.debug('System[%s] update %s at %s.', self.name, str(self.status), str(self.lastAlarmTime))
+        #if logging.getLogger().isEnabledFor(logging.DEBUG):
+        #    logging.debug('System[%s] update %s at %s.', self.name, str(self.status), str(self.lastAlarmTime))
         if (self.status == states.ALARM):
             alarmTime = (evegate.currentEveTime() - self.lastAlarmTime).total_seconds()
             for maxDiff, alarmColor, secondLineColor in self.ALARM_COLORS:
@@ -534,7 +534,7 @@ class System(object):
                     if dotlanClockAdjustSeconds > 2:
                         logging.warning('Clock is off, adjusting by %d seconds' % dotlanClockAdjustSeconds)
                 diff = diff + dotlanClockAdjustSeconds
-            minutes = diff / 60
+            minutes = diff // 60
             seconds = diff % 60
             string = "{m:02d}:{s:02d}".format(m=minutes, s=seconds)
             if self.status == states.CLEAR:
