@@ -21,7 +21,6 @@ import os
 import sys
 import six
 import logging
-import time
 
 from PyQt5.QtCore import QThread, QUrl, QEventLoop
 from PyQt5.QtMultimedia import QSoundEffect
@@ -102,6 +101,7 @@ class SoundManager(six.with_metaclass(Singleton)):
     def setSoundVolume(self, newValue):
         """ Accepts and stores a number between 0 and 100.
         """
+        # TODO: Voice and sound effect don't use same dynamic range, maybe use two sliders?
         if newValue > 100:
             newValue = 100
         elif newValue < 0:
@@ -145,6 +145,9 @@ class SoundManager(six.with_metaclass(Singleton)):
         predefined = None
         playingEffect = None
 
+        # On stock windows 10 english, see "Microsoft David Desktop" and female "Microsoft Zira Desktop"
+        FEMALE_WIN_VOICE = 'Microsoft Zira'
+
         def __init__(self, parent, predefined):
             QThread.__init__(self)
             self.parent = parent
@@ -159,9 +162,17 @@ class SoundManager(six.with_metaclass(Singleton)):
             # Initialize anything with timers in the "same thread".  __init__() runs in parent's thread
             if pyttsxAvailable and not festivalAvailable:
                 self.pyttxsxEngine = pyttsx.init()
-                # On stock windows 10 see TTS_MS_EN-US_DAVID_11.0 and female TTS_MS_EN-US_ZIRA_11.0, if no win10 Zira use default
-                if 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_ZIRA_11.0' in self.pyttxsxEngine.getProperty('voices'):
-                    self.pyttxsxEngine.setProperty('voice', 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_ZIRA_11.0')
+                for voice in self.pyttxsxEngine.getProperty('voices'):
+                    if voice.gender == 'female':
+                        logging.critical('using female voice ' + voice.name)
+                        self.pyttxsxEngine.setProperty('voice', voice.id)
+                        break
+                    elif self.FEMALE_WIN_VOICE in voice.name:
+                        logging.critical('using ' + self.FEMALE_WIN_VOICE + ' voice ' + voice.name)
+                        self.pyttxsxEngine.setProperty('voice', voice.id)
+                        break
+                    else:
+                        logging.info('available voice ' + voice.name)
             for key in self.predefined:
                 self.effects[key] = QSoundEffect()
                 self.effects[key].setSource(QUrl.fromLocalFile(resourcePath("vi/ui/res/{0}".format(self.predefined[key]))))
