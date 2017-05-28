@@ -142,12 +142,24 @@ class ChatParser(object):
             logging.debug("Ignoring duplicate message: %s" % str(message))
             return message
 
-        while parseShips(rtext):
+        cnt = 100
+        while parseShips(rtext) and cnt > 0:
+            cnt -= 1
             continue
-        while parseUrls(rtext):
+        if (cnt < 1):
+            logging.critical("Took too long to parse ships")
+        cnt = 100
+        while parseUrls(rtext) and cnt > 0:
+            cnt -= 1
             continue
-        while parseSystems(self.allSystems, rtext, systems):
+        if (cnt < 1):
+            logging.critical("Took too long to parse urls")
+        cnt = 100
+        while parseSystems(self.allSystems, rtext, systems) and cnt > 0:
+            cnt -= 1
             continue
+        if (cnt < 1):
+            logging.critical("Took too long to parse systems")
         parsedStatus = parseStatus(rtext)
         status = parsedStatus if parsedStatus is not None else states.ALARM
 

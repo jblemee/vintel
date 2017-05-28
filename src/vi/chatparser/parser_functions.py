@@ -105,6 +105,8 @@ def parseShips(rtext):
                     textReplace(text, formatted)
                     return True
 
+    return False
+
 
 def parseSystems(systems, rtext, foundSystems):
 
@@ -192,3 +194,5 @@ def parseUrls(rtext):
         for url in urls:
             textReplace(text, formatUrl(text, url))
             return True
+
+    return False

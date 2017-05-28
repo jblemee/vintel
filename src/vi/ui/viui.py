@@ -939,7 +939,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def showInfo(self):
-        infoDialog = QDialog(self)
+        infoDialog = QDialog(self, QtCore.Qt.WindowTitleHint | QtCore.Qt.WindowCloseButtonHint)
         uic.loadUi(resourcePath("vi/ui/Info.ui"), infoDialog)
         infoDialog.versionLabel.setText(u"Version: {0}".format(vi.version.VERSION))
         infoDialog.logoLabel.setPixmap(QtGui.QPixmap(resourcePath("vi/ui/res/logo.png")))
@@ -948,7 +948,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def showSoundSetup(self):
-        dialog = QDialog(self)
+        dialog = QDialog(self, QtCore.Qt.WindowTitleHint | QtCore.Qt.WindowCloseButtonHint)
         uic.loadUi(resourcePath("vi/ui/SoundSetup.ui"), dialog)
         dialog.volumeSlider.setValue(SoundManager().getSoundVolume())
         dialog.volumeSlider.valueChanged.connect(SoundManager().setSoundVolume)
@@ -1063,6 +1063,7 @@ class RegionChooser(QDialog):
     def __init__(self, parent):
         QDialog.__init__(self, parent)
         uic.loadUi(resourcePath("vi/ui/RegionChooser.ui"), self)
+        self.setWindowFlags(self.windowFlags() & ~(QtCore.Qt.WindowContextHelpButtonHint|QtCore.Qt.WindowSystemMenuHint))
         self.cancelButton.clicked.connect(self.accept)
         self.saveButton.clicked.connect(self.saveClicked)
         cache = Cache()
@@ -1111,6 +1112,7 @@ class SystemChat(QDialog):
     def __init__(self, parent, chatType, selector, chatEntries, knownPlayerNames):
         QDialog.__init__(self, parent)
         uic.loadUi(resourcePath("vi/ui/SystemChat.ui"), self)
+        self.setWindowFlags(self.windowFlags() & ~(QtCore.Qt.WindowContextHelpButtonHint|QtCore.Qt.WindowSystemMenuHint))
         self.parent = parent
         self.chatType = 0
         self.selector = selector
@@ -1252,6 +1254,7 @@ class Settings(QDialog):
     def __init__(self, parent):
         QDialog.__init__(self, parent)
         uic.loadUi(resourcePath("vi/ui/SettingsTabs.ui"), self)
+        self.setWindowFlags(self.windowFlags() & ~(QtCore.Qt.WindowContextHelpButtonHint|QtCore.Qt.WindowSystemMenuHint))
         self.cache = Cache()
         self.parent = parent
         self.tabs.setCurrentIndex(0)    # load displaying first tab, regardless of which page was last open in designer

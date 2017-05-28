@@ -47,7 +47,7 @@ def charnameToId(name):
                 return int(row["characterid"])
 
     except Exception as e:
-        logging.error("Exception turning charname to id via API: %s", e)
+        logging.error("Exception turning charname [%s] to id via API: %s", name, e)
         # fallback! if there is a problem with the API, we use evegate
         baseUrl = "https://gate.eveonline.com/Profile/"
 
