@@ -44,6 +44,11 @@ from vi.regions import REGIONS
 from vi.chatparser.chatparser import ChatParser, Message
 
 OLD_STYLE_WEBKIT = "OLD_STYLE_WEBKIT" in os.environ
+try:
+    from PyQt5.QtWebEngineWidgets import QWebEnginePage
+except ImportError:
+    logging.warning('Using old style QT webkit.  PyQt5.QtWebEngineWidgets.QWebEnginePage is not available')
+    OLD_STYLE_WEBKIT = True
 
 if OLD_STYLE_WEBKIT:
     from PyQt5.QtWebKitWidgets import QWebPage
