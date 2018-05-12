@@ -155,23 +155,30 @@ class SoundManager(six.with_metaclass(Singleton)):
             if not parent.soundAvailable:
                 logging.critical('NO SOUND ENGINE.')
                 return
-            self.queue = Queue()
             if pyttsxAvailable and not festivalAvailable:
-                self.pyttxsxEngine = pyttsx.init()
-                for voice in self.pyttxsxEngine.getProperty('voices'):
-                    if voice.gender == 'female':
-                        logging.critical('using female voice ' + voice.name)
-                        self.pyttxsxEngine.setProperty('voice', voice.id)
-                        break
-                    elif self.FEMALE_WIN_VOICE in voice.name:
-                        logging.critical('using ' + self.FEMALE_WIN_VOICE + ' voice ' + voice.name)
-                        self.pyttxsxEngine.setProperty('voice', voice.id)
-                        break
-                    else:
-                        logging.info('available voice ' + voice.name)            
+                try:
+                    self.pyttxsxEngine = pyttsx.init()
+                    for voice in self.pyttxsxEngine.getProperty('voices'):
+                        if voice.gender == 'female':
+                            logging.critical('using female voice ' + voice.name)
+                            self.pyttxsxEngine.setProperty('voice', voice.id)
+                            break
+                        elif self.FEMALE_WIN_VOICE in voice.name:
+                            logging.critical('using ' + self.FEMALE_WIN_VOICE + ' voice ' + voice.name)
+                            self.pyttxsxEngine.setProperty('voice', voice.id)
+                            break
+                        else:
+                            logging.info('available voice ' + voice.name)
+                except Exception as e:
+                    logging.critical('FAILED TO SETUP pyttsx - VOICE WILL NOT BE AVAILABLE')
+                    logging.critical(e)
+                    return
+            self.queue = Queue()
             self.active = True
 
         def run(self):
+            if not self.active:
+                return
             # Initialize anything with timers in the "same thread".  __init__() runs in parent's thread
             for key in self.predefined:
                 self.effects[key] = QSoundEffect()
