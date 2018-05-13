@@ -29,6 +29,7 @@ from logging import StreamHandler
 
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import QT_VERSION_STR
+from PyQt5.Qt import PYQT_VERSION_STR
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from vi import version
 from vi.ui import viui, systemtray
@@ -90,7 +91,7 @@ class Application(QApplication):
             else:
                 chatLogDirectory = v
 
-        if not os.path.exists(chatLogDirectory):
+        if not chatLogDirectory or not os.path.exists(chatLogDirectory):
             if sys.platform.startswith("darwin") or sys.platform.startswith("cygwin"):
                 chatLogDirectory = os.path.join(os.path.expanduser("~"), "Documents", "EVE", "logs", "Chatlogs")
                 if not os.path.exists(chatLogDirectory):
@@ -109,6 +110,9 @@ class Application(QApplication):
                 if hResult == 0:
                     documentsPath = buf.value
                     chatLogDirectory = os.path.join(documentsPath, "EVE", "logs", "Chatlogs")
+        if not chatLogDirectory:
+            QMessageBox.critical(None, "No path to Logs", "Unable to determine chat directory, please specify one on the command line.", "Quit")
+            sys.exit(1)
         if not os.path.exists(chatLogDirectory):
             # None of the paths for logs exist, bailing out
             QMessageBox.critical(None, "No path to Logs", "No logs found at: " + chatLogDirectory, "Quit")
@@ -157,10 +161,8 @@ class Application(QApplication):
 
         logging.critical("Logging set to %s." % logging.getLevelName(logLevel))
 
-        logging.critical("")
         logging.critical("------------------- Vintel %s starting up -------------------", version.VERSION)
-        logging.critical("")
-        logging.critical("QT version %s", QT_VERSION_STR)
+        logging.critical("QT version %s | PyQT Version %s", QT_VERSION_STR, PYQT_VERSION_STR)
         logging.critical("Python version %s", sys.version)
         logging.debug("Looking for chat logs at: %s", chatLogDirectory)
         logging.debug("Cache maintained here: %s", cache.Cache.PATH_TO_CACHE)

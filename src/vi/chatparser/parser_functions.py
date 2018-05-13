@@ -44,6 +44,7 @@ from bs4 import BeautifulSoup
 from bs4.element import NavigableString
 from vi import states
 from vi.systems import SYSTEMS
+from .ignored_words import WORDS_TO_IGNORE
 
 # Do not ignore <>/" which keep html from word matching on replacement
 # Do not ignore ? which triggers status change to request
@@ -74,7 +75,7 @@ def parseStatus(rtext):
             return states.CLEAR
         elif ("STAT" in upperWords or "STATUS" in upperWords):
             return states.REQUEST
-        elif (text.strip().upper() in ("BLUE", "BLUES ONLY", "ONLY BLUE" "STILL BLUE", "ALL BLUES")):
+        elif (upperText in ("BLUE", "BLUES ONLY", "ONLY BLUE" "STILL BLUE", "ALL BLUES")):
             return states.CLEAR
 
 
@@ -111,11 +112,6 @@ def parseShips(rtext):
 def parseSystems(systems, rtext, foundSystems):
 
     systemNames = systems.keys()
-
-    # words to ignore on the system parser. use UPPER CASE
-    WORDS_TO_IGNORE = ("IN", "IS", "AS", "OR", "NV", "TO", "ME", "HE", "SHE", "YOU", "ARE",
-        "ON", "HAS", "OF", "IT", "GET", "IF", "THE", "HOT", "OH", "OK", "GJ", "AND", "MY",
-        "SAY", "ANY", "NO", "FOR", "OUT", "WH", "MAN", "PART", "AT", "AN" )
 
     def formatSystem(text, word, system):
         newText = u"""<a style="color:#CC8800;font-weight:bold" href="mark_system/{0}">{1}</a>"""

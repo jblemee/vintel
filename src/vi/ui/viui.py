@@ -51,6 +51,7 @@ except ImportError:
     OLD_STYLE_WEBKIT = True
 
 if OLD_STYLE_WEBKIT:
+    logging.warning('Using old style QT webkit.')
     from PyQt5.QtWebKitWidgets import QWebPage
 
 # Timer intervals
@@ -1246,9 +1247,12 @@ class ChatEntryWidget(QWidget):
 
 
     def changeFontSize(self, newSize):
-        font = self.textLabel.font()
-        font.setPointSize(newSize)
-        self.textLabel.setFont(font)
+        try:
+            font = self.textLabel.font()
+            font.setPointSize(newSize)
+            self.textLabel.setFont(font)
+        except:
+            pass
 
 
 class Settings(QDialog):

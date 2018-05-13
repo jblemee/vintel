@@ -299,7 +299,7 @@ SHIPNAMES = (u'ABADDON', u'ABSOLUTION', u'AEON', u'AMARR SHUTTLE', u'ANATHEMA', 
              u'T3D', u'JACKDAW', u'SVIPUL', u'CONFESSOR', u'HECTATE',
              u'T3C', u'TENGU', u'LOKI', u'LEGION', u'PROTEUS',
              u'STORK', u'BIFROST', u'PONTIFEX', u'MAGUS')
-SHIPNAMES = sorted(SHIPNAMES, key=lambda x: len(x), reverse=True)
+SHIPNAMES = sorted(SHIPNAMES, key=lambda x: len(x), reverse=True)  # Check longest names first
 
 NPC_CORPS = (u'Republic Justice Department', u'House of Records', u'24th Imperial Crusade', u'Template:NPC corporation',
              u'Khanid Works', u'Caldari Steel', u'School of Applied Knowledge', u'NOH Recruitment Center',
