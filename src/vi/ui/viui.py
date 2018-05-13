@@ -746,15 +746,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if MainWindow.oldStyleWebKit:
             self.mapView.setContent(content)
         else:
-            #
-            # According to the docs we must call setContent with SVG data.
-            # However this does not actually render the SVG so we use setHtml for now.
-            #
-            if True:
-                self.mapView.page().setHtml(content)
-            else:
-                array = QByteArray().append(content)
-                self.mapView.page().setContent(array, mimeType=str('image/svg+xml'))
+            self.mapView.page().setContent(str.encode(content), mimeType=str('image/svg+xml'))
         self.setMapScrollPosition(scrollPosition)
 
         # Make sure we have positioned the window before we nil the initial position;
