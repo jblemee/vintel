@@ -48,7 +48,7 @@ class ChatParser(object):
             rooms = the rooms to parse"""
         self.messageExpirySecs = messageExpirySecs
         self.path = path  # the path with the chatlog
-        self.rooms = rooms  # the rooms to watch (excl. local)
+        self.rooms = [r.lower() for r in rooms]  # the rooms to watch (excl. local)
         self.allSystems = allSystems  # the known systems as dict name: system
         self.fileData = {}  # informations about the files in the directory
         self.knownMessages = []  # message we allready analyzed
@@ -206,14 +206,12 @@ class ChatParser(object):
         # EvE names the file like room_20140913_200737.txt, so we don't need
         # the last 20 chars
         filename = os.path.basename(path)
-        roomname = filename[:-20]
+        roomname = filename[:-20].lower()
         if path not in self.fileData:
             # seems eve created a new file. New Files have 12 lines header
             self.fileData[path] = {"lines": self.HEADER_SIZE()}
         oldLength = self.fileData[path]["lines"]
         lines = self.addFile(path)
-        if path in self.ignoredPaths:
-            return []
         for line in lines[oldLength - 1:]:
             line = line.strip()
             if len(line) > 2:

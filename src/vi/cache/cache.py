@@ -36,6 +36,9 @@ else:
 import logging
 from vi.cache.dbstructure import updateDatabase
 
+ONE_DAY      = 60 * 60 * 24
+DEFAULT_TIME = ONE_DAY * 3
+PERMANENT    = ONE_DAY * 365
 
 class Cache(object):
     # Cache checks PATH_TO_CACHE when init, so you can set this on a
@@ -75,7 +78,7 @@ class Cache(object):
                 raise e
         updateDatabase(version, self.con)
 
-    def putIntoCache(self, key, value, maxAge=60 * 60 * 24 * 3):
+    def putIntoCache(self, key, value, maxAge=DEFAULT_TIME):
         """ Putting something in the cache maxAge is maximum age in seconds, default is 3 days
         """
         with Cache.SQLITE_WRITE_LOCK:
