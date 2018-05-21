@@ -33,7 +33,7 @@ from .parser_functions import parseStatus
 from .parser_functions import parseUrls, parseShips, parseSystems
 
 # Names the local chatlogs could start with (depends on l10n of the client)
-LOCAL_NAMES = ("Local", "Lokal", six.text_type("\u041B\u043E\u043A\u0430\u043B\u044C\u043D\u044B\u0439"))
+LOCAL_NAMES = ("local", "lokal", six.text_type("\u041B\u043E\u043A\u0430\u043B\u044C\u043D\u044B\u0439").lower())
 
 
 class ChatParser(object):
@@ -69,7 +69,7 @@ class ChatParser(object):
         lines = None
         content = ""
         filename = os.path.basename(path)
-        roomname = filename[:-20]
+        roomname = filename[:-20].lower()
         try:
             with open(path, "r", encoding='utf-16-le') as f:
                 content = f.read()
