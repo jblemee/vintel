@@ -5,7 +5,7 @@ app_name = 'vintel'
 block_cipher = None
 
 a = Analysis(['vintel.py'],
-             pathex=['z:\\mark\\code\\vintel\\src' if sys.platform == 'win32' else '/Users/mark/code/vintel/src'],
+             pathex=['z:\\mark\\code\\vintel\\src' if sys.platform == 'win32' else '/home/jbl/vintel/vintel/src'],
              binaries=None,
              datas=None,
              hiddenimports=[],
@@ -23,8 +23,7 @@ a.datas += [('vi/ui/MainWindow.ui', 'vi/ui/MainWindow.ui', 'DATA'),
             ('vi/ui/ChatEntry.ui', 'vi/ui/ChatEntry.ui', 'DATA'),
             ('vi/ui/Info.ui', 'vi/ui/Info.ui', 'DATA'),
             ('vi/ui/SoundSetup.ui', 'vi/ui/SoundSetup.ui', 'DATA'),
-            ('vi/ui/JumpbridgeChooser.ui', 'vi/ui/JumpbridgeChooser.ui', 'DATA'),
-            ('vi/ui/res/qmark.png', 'vi/ui/res/qmark.png', 'DATA'),
+             ('vi/ui/res/qmark.png', 'vi/ui/res/qmark.png', 'DATA'),
             ('vi/ui/res/logo.png', 'vi/ui/res/logo.png', 'DATA'),
             ('vi/ui/res/logo_small.png', 'vi/ui/res/logo_small.png', 'DATA'),
             ('vi/ui/res/logo_small_green.png', 'vi/ui/res/logo_small_green.png', 'DATA'),
