@@ -65,7 +65,7 @@ class ChatParser(object):
         lines = None
         content = ""
         filename = os.path.basename(path)
-        roomname = filename[:-20]
+        roomname = filename[:-31]
         try:
             with open(path, "r", encoding='utf-16-le') as f:
                 content = f.read()
