@@ -52,7 +52,7 @@ except ImportError:
 
 if OLD_STYLE_WEBKIT:
     logging.warning('Using old style QT webkit.')
-    from PyQt5.QtWebKitWidgets import QWebPage
+    from PyQt5.QtWebEngineWidgets import QWebEnginePage
 
 # Timer intervals
 MESSAGE_EXPIRY_SECS = 60 * 60 * 1
@@ -374,7 +374,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
             if MainWindow.oldStyleWebKit:
                 self.mapView.linkClicked.connect(self.mapLinkClicked)
-                self.mapView.page().setLinkDelegationPolicy(QWebPage.DelegateAllLinks)
+                self.mapView.page().setLinkDelegationPolicy(QWebEnginePage.DelegateAllLinks)
 
         self.jumpbridgesButton.setChecked(False)
         self.statisticsButton.setChecked(False)
