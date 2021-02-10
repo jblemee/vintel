@@ -71,7 +71,7 @@ class ChatParser(object):
         lines = None
         content = ""
         filename = os.path.basename(path)
-        roomname = filename[:-20].lower()
+        roomname = filename[:-31].lower()
         try:
             with open(path, "r", encoding='utf-16-le') as f:
                 content = f.read()
@@ -219,7 +219,7 @@ class ChatParser(object):
         # Checking if we must do anything with the changed file.
         # We only need those which name is in the rooms-list
         # EvE names the file like room_20140913_200737.txt, so we don't need
-        # the last 20 chars
+        # the last 31 chars
         filename = os.path.basename(path)
         roomname = filename[:-31].lower()
         if path not in self.fileData:
