@@ -23,6 +23,7 @@ import os
 import logging
 import traceback
 import argparse
+import win32com
 
 from logging.handlers import RotatingFileHandler
 from logging import StreamHandler
